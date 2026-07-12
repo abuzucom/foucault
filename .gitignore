@@ -1,0 +1,32 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Secrets and local config (this repo reviews for these; never commit them)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+
+# Logs and temp
+*.log
+tmp/
+temp/
+
+# Node (if tooling is added)
+node_modules/
+
+# Python (if tooling is added)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
