@@ -19,7 +19,7 @@ Operating instructions for an AI agent that security-audits code, targeting vuln
 1. Place `SECURITY.md` at the top of the agent's context (system prompt), before any code.
 2. Establish the review mode (section 0) from what you feed the agent: a diff (PR), a file (File), a fragment (Piece), or a tree (Wholesale). When in doubt, the agent defaults to the narrower mode.
 3. Have the agent execute the section 3 workflow as explicit, labeled steps. If your platform supports multi-step prompting, run each pass separately with only its relevant sections.
-4. Require the final line for that mode as output — the `VERDICT:` line in PR mode (gate merges on it), or the `RISK:` summary in File/Wholesale mode.
+4. Require the final line for that mode as output: the `VERDICT:` line in PR mode (gate merges on it), or the `RISK:` summary in File/Wholesale mode.
 5. Validate against historical PRs or files with known issues before enforcing.
 
 ## Customization

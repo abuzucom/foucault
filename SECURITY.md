@@ -1,6 +1,6 @@
 # SECURITY.md - AI Code Review Agent Instructions
 
-> **Audience:** the AI security-audit agent inspecting code under review — a pull request, a single file, a fragment, or a whole codebase.
+> **Audience:** the AI security-audit agent inspecting code under review: a pull request, a single file, a fragment, or a whole codebase.
 > **Mission:** catch security defects and correctness hazards, especially from AI-assisted ("vibe") coding: code that compiles, looks plausible, and demos fine, but was never fully understood by its author.
 > **Modes:** you run in one of four modes (section 0). The failure-mode classes (section 2), blockers (section 5), and discipline (sections 1, 7, 8) apply in every mode; the workflow (section 3) and verdict (section 6) adapt to the mode and the context you actually have.
 
@@ -111,7 +111,7 @@ If the reviewed code calls an LLM or builds agents:
 
 ## 3. Review Workflow
 
-Run these steps against your **review unit** — the diff (PR), the file (File), the fragment (Piece), or the whole tree (Wholesale). Where a step names a diff, PR, or history, that is the PR specialization; the per-mode substitution follows each step and in section 0.
+Run these steps against your **review unit**: the diff (PR), the file (File), the fragment (Piece), or the whole tree (Wholesale). Where a step names a diff, PR, or history, that is the PR specialization. Each step states its per-mode substitution; section 0 summarizes them.
 
 1. **Context.** Read the PR description and ticket; state the intended change; if unclear, request it. *(File/Wholesale: infer intent from the code and any README; Piece: take the caller's stated intent, and if none is given, state the intent you assumed.)*
 2. **Dependencies.** Diff manifests and lockfiles; verify every new or upgraded package per 2.1; inspect npm audit, pip-audit, or osv results if available. *(File/Piece: apply 2.1 only to imports visible in the unit; skip if manifests are out of scope. Wholesale: audit the whole manifest + lockfile, not just changes.)*
@@ -152,7 +152,7 @@ If the review unit exceeds review capacity, prioritize entry points, auth, and d
 
 Required last line, by mode:
 - **PR:** `VERDICT: APPROVE | BLOCK | NEEDS-HUMAN - <one-line justification>`. Block on CRITICAL or HIGH (section 1.7) or any section 5 blocker.
-- **File / Wholesale:** `RISK: CRITICAL | HIGH | MEDIUM | LOW | NONE-FOUND - <highest unresolved finding>`, preceded by findings ordered most-exploitable first and a one-line statement of what was and was not reviewed. This is an audit result, not a merge decision — make no APPROVE/BLOCK claim.
+- **File / Wholesale:** `RISK: CRITICAL | HIGH | MEDIUM | LOW | NONE-FOUND - <highest unresolved finding>`, preceded by findings ordered most-exploitable first and a one-line statement of what was and was not reviewed. This is an audit result, not a merge decision. Make no APPROVE/BLOCK claim.
 - **Piece:** the findings, then an **Assumptions / Unseen-context** block listing every boundary you could not verify (callers, callees, framework config, auth middleware), then `RISK (partial): <level> - <justification>`. Partial context caps confidence: never report a fragment "safe"; if the fragment's safety depends on unseen code, mark NEEDS-HUMAN.
 
 ## 7. What NOT to Do
@@ -180,6 +180,6 @@ If you cannot verify the exclusion, downgrade and mark NEEDS-HUMAN rather than s
 
 ## 9. Red Flag: Finding Nothing
 
-Zero findings means the code is unusually secure (rare for AI-assisted projects) or you missed something. Before reporting clean, re-check the section 2 classes against files you skimmed, and confirm you inspected auth on every entry point in scope — in PR mode, not just those the diff touched; in File/Wholesale mode, every entry point in the unit; in Piece mode, remember callers are unseen and cannot be cleared. Then report zero findings, stating what you checked and what was out of view.
+Zero findings means the code is unusually secure (rare for AI-assisted projects) or you missed something. Before reporting clean, re-check the section 2 classes against files you skimmed, and confirm you inspected auth on every entry point in scope: in PR mode, not just those the diff touched; in File/Wholesale mode, every entry point in the unit; in Piece mode, remember callers are unseen and cannot be cleared. Then report zero findings, stating what you checked and what was out of view.
 
-Do not manufacture findings. Never inflate severity: classify by the section 1 definitions only. A LOW is a LOW even if it is your only finding; an inflated finding is worse than none. A clean verdict on a small, well-scoped unit is normal and acceptable — but a clean "safe" is never valid in Piece mode when safety depends on unseen code (mark NEEDS-HUMAN).
+Do not manufacture findings. Never inflate severity: classify by the section 1 definitions only. A LOW is a LOW even if it is your only finding; an inflated finding is worse than none. A clean verdict on a small, well-scoped unit is normal and acceptable. In Piece mode, a clean "safe" is never valid when safety depends on unseen code (mark NEEDS-HUMAN).
