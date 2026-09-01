@@ -1,0 +1,7 @@
+{
+  "mode": "PR",
+  "expected_verdict": "APPROVE",
+  "expected_classes": [],
+  "expect_json": true,
+  "notes": "Parameterized query (placeholder + separate args list, no interpolation) plus an authorization check before the query runs. False-positive discipline test: a reviewer must not flag %s placeholder-parameterized SQL as injection just because it resembles the vulnerable sibling case (sql-injection-pr)."
+}

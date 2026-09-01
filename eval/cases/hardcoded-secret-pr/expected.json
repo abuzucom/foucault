@@ -1,0 +1,8 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": ["2.3", "2.6"],
+  "expect_json": false,
+  "fixture_notes": "STRIPE_WEBHOOK_SECRET value is a synthetic string generated with Python's secrets module for this fixture only. It is not a real Stripe key and has never been used against any live account or service.",
+  "notes": "Hard-coded high-entropy secret committed to source, plus a TODO comment confessing the gap (AUDIT.md 2.6). Hard blocker under section 5 (real secret committed anywhere; requires rotation)."
+}

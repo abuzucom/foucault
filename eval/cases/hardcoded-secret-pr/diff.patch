@@ -1,0 +1,11 @@
+--- a/app/billing/webhook.py
++++ b/app/billing/webhook.py
+@@ -1,5 +1,9 @@
+ from flask import Blueprint, request
+
++# TODO: move to secrets manager before launch
++STRIPE_WEBHOOK_SECRET = "whsec_0bb3a82ecf53b6c50970b0cc156e9ff4e60c0dc3"
++
+ webhook = Blueprint("webhook", __name__)
+
+ @webhook.route("/billing/webhook", methods=["POST"])

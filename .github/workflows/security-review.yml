@@ -1,0 +1,134 @@
+name: security-review
+
+# Reusable workflow that runs AUDIT.md against a pull request diff and
+# posts the result. Adopt with:
+#
+#   jobs:
+#     security-review:
+#       uses: abuzucom/foucault/.github/workflows/security-review.yml@<full-commit-sha>
+#       with:
+#         audit_ref: "<the same full-commit-sha>"
+#         model_call_command: "python ci/call_model.py"
+#       secrets: inherit
+#
+# Pin both `uses:` and `audit_ref` to the same full commit SHA (never a tag
+# or branch). Record the release version in a comment beside the pin.
+#
+# foucault ships no model credential and no provider lock-in. `model_call_command`
+# is a shell command supplied by the adopting repository: it reads the
+# system prompt from the file named by $AUDIT_PROMPT_FILE and the case text
+# (PR title, body, and diff) from the file named by $CASE_TEXT_FILE, then
+# writes the model's raw text response to stdout. Wire it to whichever
+# provider and model that repository's deployment of AUDIT.md uses.
+
+on:
+  workflow_call:
+    inputs:
+      audit_ref:
+        description: "abuzucom/foucault commit SHA to load AUDIT.md from. Match the uses: pin."
+        required: true
+        type: string
+      model_call_command:
+        description: "Shell command reading $AUDIT_PROMPT_FILE and $CASE_TEXT_FILE, writing the model response to stdout."
+        required: true
+        type: string
+      pr_comment:
+        description: "Post the report as a PR comment."
+        required: false
+        type: boolean
+        default: true
+      fail_on_block:
+        description: "Fail the job when the response's VERDICT line is BLOCK."
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout pull request
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Checkout AUDIT.md
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: abuzucom/foucault
+          ref: ${{ inputs.audit_ref }}
+          path: .foucault
+          persist-credentials: false
+
+      - name: Build case text
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          {
+            echo "Title: $PR_TITLE"
+            echo
+            echo "$PR_BODY"
+            echo
+            echo "---"
+            git diff "$BASE_SHA" "$HEAD_SHA"
+          } > case_text.txt
+
+      - name: Run model call
+        id: model
+        env:
+          AUDIT_PROMPT_FILE: .foucault/AUDIT.md
+          CASE_TEXT_FILE: case_text.txt
+        run: |
+          set -euo pipefail
+          ${{ inputs.model_call_command }} > response.txt
+
+      - name: Parse verdict
+        id: verdict
+        run: |
+          set -euo pipefail
+          line="$(grep -E '^(VERDICT|RISK(\s\(partial\))?):' response.txt | head -1 || true)"
+          if [ -z "$line" ]; then
+            echo "No VERDICT:/RISK: line found in response." >&2
+            exit 1
+          fi
+          delimiter="verdict_line_$(date +%s%N)"
+          {
+            echo "line<<$delimiter"
+            echo "$line"
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+          if [ "${{ inputs.fail_on_block }}" = "true" ] && printf '%s' "$line" | grep -q 'BLOCK'; then
+            echo "blocked=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post PR comment
+        if: ${{ inputs.pr_comment }}
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('response.txt', 'utf8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+      - name: Fail on BLOCK
+        if: ${{ steps.verdict.outputs.blocked == 'true' }}
+        env:
+          VERDICT_LINE: ${{ steps.verdict.outputs.line }}
+        run: |
+          echo "$VERDICT_LINE" >&2
+          exit 1

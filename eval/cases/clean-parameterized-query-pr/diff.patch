@@ -1,0 +1,12 @@
+--- a/app/admin/search.py
++++ b/app/admin/search.py
+@@ -10,6 +10,13 @@ def admin_search(request):
+     name = request.GET.get("name", "")
++    if not request.user.is_staff:
++        return HttpResponseForbidden()
++    cursor = connection.cursor()
++    cursor.execute(
++        "SELECT id, email, role FROM users WHERE name = %s", [name]
++    )
++    rows = cursor.fetchall()
++    return render(request, "admin/search.html", {"results": rows})

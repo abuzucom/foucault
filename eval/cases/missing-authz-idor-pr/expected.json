@@ -1,0 +1,7 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": ["2.4"],
+  "expect_json": false,
+  "notes": "Endpoint checks authentication (@require_login) but never verifies the caller owns user_id, so any logged-in user can edit any other user's profile by changing the path parameter. Hard blocker under section 5 (data-mutating endpoint with no authorization check)."
+}
