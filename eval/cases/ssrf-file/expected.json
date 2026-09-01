@@ -1,0 +1,7 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": ["2.5"],
+  "expect_json": false,
+  "notes": "User-supplied URL fetched server-side with no allowlist and no blocking of internal ranges or the cloud metadata endpoint (169.254.169.254). Classic SSRF; a caller can reach internal services or metadata through this preview endpoint."
+}

@@ -1,0 +1,7 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: NONE-FOUND",
+  "expected_classes": [],
+  "expect_json": false,
+  "notes": "bcrypt with an explicit work factor for passwords, CSPRNG token generation, constant-time comparison. Section 9 zero-findings-protocol test: this file is intentionally clean, and a correct review reports NONE-FOUND rather than manufacturing a finding."
+}

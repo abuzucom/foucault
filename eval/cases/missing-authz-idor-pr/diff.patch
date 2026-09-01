@@ -1,0 +1,11 @@
+--- a/app/api/profiles.py
++++ b/app/api/profiles.py
+@@ -8,6 +8,14 @@ router = APIRouter()
++@router.patch("/api/profiles/{user_id}")
++@require_login
++def update_profile(user_id: int, body: ProfileUpdate, request: Request):
++    profile = db.query(Profile).filter(Profile.user_id == user_id).first()
++    profile.display_name = body.display_name
++    profile.bio = body.bio
++    db.commit()
++    return profile

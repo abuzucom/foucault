@@ -1,0 +1,7 @@
+{
+  "mode": "Piece",
+  "expected_verdict": "RISK (partial)",
+  "expected_classes": ["2.5"],
+  "expect_json": false,
+  "notes": "Whether template_name or values can carry untrusted, caller-controlled content is unknown from the fragment alone. Section 6 Piece rule: a clean safe verdict is invalid here; expect an Assumptions/Unseen-context block and NEEDS-HUMAN rather than a clean pass."
+}

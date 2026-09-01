@@ -1,0 +1,23 @@
+{
+  "agents_commit": "a7a066181a9995a26f5afcec95b0541ce99e9bab",
+  "agents_repo": "abuzucom/agents",
+  "files": {
+    "hooks/_bash_parser.py": "6c28a00b050a59a9d69918f6b492079072813aed3540c576595c0a426a0c8929",
+    "hooks/_gate_core.py": "adf4fa44c4a4f76286ea7ad23e2414f3b0d50dac28314b7c56e74181185fbd21",
+    "hooks/enforce_branch_name.py": "6a995670ca320af74da40dc6c06b652604cb39345f9ae000233ccf57c13d2d50",
+    "hooks/enforce_git_identity.py": "922f43f5adf3e2fe2169fbdf40cf0509fa8f08485cbd7b24cb8d80e012586cce",
+    "scripts/check_ascii.py": "c2be41a7d4e6919e7f4f5ebdf225541c289b172dd0f9cbe112690958f4a2407a",
+    "scripts/check_branch_name.py": "c55e4e9cf49b9da78aaca5a675f2426cc516e2a292d4c7440b6e194e251b17d1",
+    "scripts/check_english_only.py": "0358dc316c99a402b87c5a0c6c6932f02c895625f446401152551873a3114c08",
+    "scripts/check_git_identity.py": "6d6df38964d6b0b7507027b539dc7d19603fb7ac906c944dc44dfbeba764d28b",
+    "scripts/check_hedging.py": "fb2d368e2fbf785419836c5e1ee23d980b0cbba9a68054a5a800c6025aba383d",
+    "scripts/check_us_spelling.py": "6c5fd1f98c76bb6614cd4bdcfa933e9d7fc246aebe418d87261c29d1c3ae27e9",
+    "scripts/lint_style.py": "53f46e2a016575e853910abb3a0a97a46939b503060255197511c18b6a572514",
+    "scripts/prose_bans.txt": "66b5dbca3a3e8238ff7af969a4ac458802aa6e431be7d533df4c926fa16d553d",
+    "scripts/prose_policy.py": "1f8a1654d7909c4b7a97204be2b7b7fc291205c4f10b6d8df5b8a6fa8040e0da",
+    "scripts/read_git_state.py": "40d1c2eb96eb12fae50d0d010df7c4c1ac0361a9cd69e1c8ff9225109d85cde1",
+    "scripts/trusted_git.py": "92d96209122407eb5d4d25433fe03f81b0c1d52567df2899d9ae39c03390f1e9",
+    "tests/test_enforce_git_identity.py": "c24e8116eb372db84f043aaa562af11db5bfcbf41ca2d1f36f8cf87496d4465c",
+    "tests/test_trusted_git_state.py": "9c22889d12f6b3c890cc6889d5b87eb1ab6a719453bf3c2ef0b9a15d3d4fd75e"
+  }
+}

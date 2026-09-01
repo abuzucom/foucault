@@ -1,0 +1,7 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": ["2.5"],
+  "expect_json": true,
+  "notes": "String-concatenated SQL query built from an unvalidated GET parameter. Hard blocker under section 5 (SQL/command construction via string interpolation of external input)."
+}

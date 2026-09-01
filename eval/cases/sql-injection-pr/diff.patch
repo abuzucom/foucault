@@ -1,0 +1,9 @@
+--- a/app/admin/search.py
++++ b/app/admin/search.py
+@@ -10,6 +10,12 @@ def admin_search(request):
+     name = request.GET.get("name", "")
++    cursor = connection.cursor()
++    query = "SELECT id, email, role FROM users WHERE name = '" + name + "'"
++    cursor.execute(query)
++    rows = cursor.fetchall()
++    return render(request, "admin/search.html", {"results": rows})

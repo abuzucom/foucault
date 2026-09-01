@@ -1,0 +1,7 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: CRITICAL",
+  "expected_classes": ["2.7"],
+  "expect_json": false,
+  "notes": "Password hashed with MD5 (fast, unsalted, no work factor) and compared with a plain equality check instead of a constant-time comparison. Hard blocker under section 5 (MD5 or SHA-1 for password storage or verification)."
+}
