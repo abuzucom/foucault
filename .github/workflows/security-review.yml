@@ -99,7 +99,12 @@ jobs:
             echo "No VERDICT:/RISK: line found in response." >&2
             exit 1
           fi
-          echo "line=$line" >> "$GITHUB_OUTPUT"
+          delimiter="verdict_line_$(date +%s%N)"
+          {
+            echo "line<<$delimiter"
+            echo "$line"
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
           if [ "${{ inputs.fail_on_block }}" = "true" ] && printf '%s' "$line" | grep -q 'BLOCK'; then
             echo "blocked=true" >> "$GITHUB_OUTPUT"
           else
@@ -122,6 +127,8 @@ jobs:
 
       - name: Fail on BLOCK
         if: ${{ steps.verdict.outputs.blocked == 'true' }}
+        env:
+          VERDICT_LINE: ${{ steps.verdict.outputs.line }}
         run: |
-          echo "${{ steps.verdict.outputs.line }}" >&2
+          echo "$VERDICT_LINE" >&2
           exit 1
