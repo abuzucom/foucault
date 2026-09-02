@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: MEDIUM",
+  "expected_classes": [
+    "2.15"
+  ],
+  "expect_json": false,
+  "notes": "Retrieved chunks are concatenated with no provenance label and no framing that marks them as evidence, and the prompt explicitly instructs the model to follow instructions found inside them. The store is populated from indexed documents, so anyone who can get a document indexed can plant instructions that execute for every later query. The instruction hierarchy here is inverted rather than merely absent."
+}

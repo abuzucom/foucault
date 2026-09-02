@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.12"
+  ],
+  "expect_json": false,
+  "notes": "A national identifier and partial card data are stored in plain columns with no encryption at rest, and the docstring states nothing ever deletes them, so there is no retention limit or deletion path. archive then logs the entire instance dictionary, writing every one of those fields into the log sink. Whole-object logging is the same defect as a whole-model response, one sink over."
+}

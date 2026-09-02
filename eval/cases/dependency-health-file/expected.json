@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: MEDIUM",
+  "expected_classes": [
+    "2.1"
+  ],
+  "expect_json": false,
+  "notes": "A third date library joins two that already do the job, so fixes and advisories now have to reach three places. moment is in maintenance mode with its own successor recommendation. left-pad-esm is pinned to * so any future publish is accepted automatically, and it exists for functionality the standard library already provides, which is both the trivial-dependency rule and an unpinned-version finding."
+}

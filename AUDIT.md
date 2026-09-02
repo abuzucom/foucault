@@ -34,14 +34,17 @@ Rules that assume a diff, git history, or manifests (2.3 history check, 3.2, 3.3
 Check every class against your review unit (section 0), not only against changed lines.
 
 ### 2.1 Hallucinated or Wrong Dependencies ("slopsquatting")
-- Verify every new dependency exists on the official registry, is the intended package (not a typo-squat), and has real download history, maintenance, and no advisories.
+- Verify every new dependency exists on the official registry, is the intended package (not a typo-squat), and has real download history, maintenance, and no advisories. Treat no release or maintainer activity within a year as unmaintained. Advisories against transitive packages count even where the direct dependency is clean.
+- Flag several packages providing one capability, and dev dependencies reaching a production build.
 - Reject dependencies for trivial functionality; prefer stdlib or in-repo utilities.
+- Flag an absent or uncommitted lockfile. Every install then resolves fresh, so a yanked or compromised transitive version enters the build with no diff to review and nothing reproducible to roll back to.
 - Require lockfile and manifest to change together; flag one without the other.
 - Flag nonexistent version pins, latest or unpinned versions, and git/URL dependencies.
 
 ### 2.2 Hallucinated APIs, Flags, and Config
 - Confirm everything called or configured exists in the pinned version. Flag APIs from other major versions and invented parameters; an ignored security config is security off.
 - Flag invented environment variables, config keys, and CLI flags; a typo'd key the framework ignores fails open.
+- Flag APIs that exist but were superseded for a security reason, and deprecation warnings suppressed rather than resolved. Unsafe entry points outlive deprecation because removing them breaks callers: new Buffer() returns uninitialized memory, leaking unrelated heap.
 
 ### 2.3 Secrets in Code
 - Zero tolerance: API keys, tokens, passwords, private keys, connection strings, tokened webhook URLs, in source, tests, fixtures, comments, sample configs, or committed .env files. Check git history, not just HEAD. Includes example credentials copied from docs.
@@ -54,11 +57,11 @@ Check every class against your review unit (section 0), not only against changed
 - IDOR: require any handler taking an ID to verify the caller may access that object, not just that the caller is logged in. Generated code almost never does this.
 - Check authorization on write paths and hidden admin endpoints. Flag mass-assignment: update handlers accepting role, is_admin, or owner_id from the body.
 - Flag blind trust in request parameters (client-supplied IDs, roles, prices, flags used directly), and admin backdoors, magic parameters, or override tokens left in "for testing".
-- Validation: require a schema on every accepted body, path, and query value, covering type, length, format, and numeric range, enforced server-side. Require it strict, rejecting unknown properties; a permissive schema is how the mass-assignment above succeeds. Validate the parsed value, not the coerced one: a query parser that turns ?id[$gt]= into an object satisfies a loose schema and feeds 2.5's operator injection.
+- Validation: require a strict server-side schema on every body, path, and query value, covering type, length, format, and range. Rejecting unknown properties is how the mass-assignment above is stopped. Validate the parsed value, not the coerced one: a parser turning ?id[$gt]= into an object satisfies a loose schema and feeds 2.5.
 - Sessions: rotate the identifier on login and on privilege change, invalidate server-side on logout and password change, enforce idle and absolute expiry, and sign client-side session state. A session fixed before login, or still live after logout, keeps an attacker authenticated.
-- Tokens: validate issuer and audience, provide revocation and rotation, and keep tokens out of script-readable storage. Signature and algorithm belong to 2.7. Scope cookies no broader than the issuing host and never persist a session token past the session. A token minted for another tenant otherwise verifies.
+- Tokens: validate issuer and audience, provide revocation and rotation, and keep tokens out of script-readable storage. Scope cookies no broader than the issuing host and never persist a session token past the session. A token minted for another tenant otherwise verifies. Signature and algorithm: 2.7.
 - Delegated authorization: require anti-CSRF state, proof of key exchange for public clients, single-use codes, exact-match redirect URIs, and scope validation at the resource server. A missing state parameter binds a victim's session to the attacker's account.
-- Credential paths: require the second factor on every authentication route, naming the ones that skip it (API tokens, password reset, session replay). Rate-limit login, reset, and factor submission server-side per 2.11. Return uniform responses and timing for valid and invalid identities, or the login form is a user directory.
+- Credential paths: require the second factor on every authentication route, naming those that skip it (API tokens, password reset, session replay). Rate-limit login, reset, and factor submission server-side (2.11). Return uniform responses and timing for valid and invalid identities, or the login form is a user directory.
 
 ### 2.5 Injection
 Non-negotiable: never build queries, commands, or code by concatenating or interpolating untrusted input. Use parameterization, safe APIs, or vetted escaping libraries: placeholder-parameterized queries for SQL, array-based command execution with no shell, vetted escaping where parameterization is impossible. Concatenation is a finding regardless of surrounding hand-rolled sanitization.
@@ -66,7 +69,7 @@ Non-negotiable: never build queries, commands, or code by concatenating or inter
 - SQL: flag concatenation, f-strings, and templates into queries, even where inputs look safe. Require parameterized queries or the ORM's safe API. Watch raw-query escape hatches (.raw(), text(), $queryRawUnsafe).
 - Command: flag shell=True, exec, backticks, child_process.exec with interpolated input. Require argument arrays (execFile, subprocess.run([...])).
 - Path traversal: flag user input joined into file paths without canonicalization and prefix check. Decode before canonicalizing. Archive entry names and symlink targets are user input too.
-- XSS: flag dangerouslySetInnerHTML, innerHTML, v-html, unescaped template output, user data in inline scripts or javascript: hrefs. Cover reflected, stored, and DOM sources alike; escaping matches the sink context. Non-browser sinks count: markdown posted to an issue tracker, chat markup, and HTML mail all render what you send them. Allowlist schemes on any rendered link.
+- XSS: flag dangerouslySetInnerHTML, innerHTML, v-html, unescaped template output, user data in inline scripts or javascript: hrefs. Cover reflected, stored, and DOM sources alike; escaping matches the sink context. Non-browser sinks count: issue-tracker markdown, chat markup, and HTML mail all render what you send. Allowlist schemes on rendered links.
 - SSRF: flag user-supplied URLs fetched server-side without an allowlist and blocking of internal ranges and metadata endpoints (169.254.169.254).
 - Template: flag user input reaching a template compiler rather than a template's data (render_template_string, a Template built from a request). Server-side template injection reaches the object graph and becomes RCE.
 - XXE: flag untrusted XML parsed with DTD or external-entity resolution enabled. An entity reads local files and reaches internal endpoints. Require a hardened parser and cap entity expansion.
@@ -80,7 +83,15 @@ Non-negotiable: never build queries, commands, or code by concatenating or inter
 - Flag: CORS * (especially with credentials), verify=False or disabled TLS validation, an outdated minimum TLS version or an unvetted cipher list, DEBUG=True, weak or missing CSP, disabled CSRF, 0.0.0.0 binds, open buckets, chmod 777, allow-all firewall or IAM rules, default admin passwords.
 - Flag boilerplate without security customization: default middleware, untouched scaffolding settings, sample configs promoted to real configs.
 - Flag test code, seed data, or test endpoints reachable in production, and feature flags that disable security controls and default to disabled.
+- Served file surface: the server hands out more than the application serves. Flag directory listing, and reachable version-control directories, backups, dumps, dotfiles, source maps, and manifests. A reachable /.git/config rebuilds the source tree.
+- Diagnostic surface: debug, metrics, profiling, and API-explorer routes reachable without auth. Flag version-disclosing headers and stock error pages; a version banner turns a published CVE into a targeted exploit.
 - Treat comments like "TODO: add auth check", "FIXME: validate input", "HACK: temporary bypass", "for now" as confessions; verify each and flag any guarding a live code path.
+
+If the reviewed system runs agents or untrusted code in a sandbox:
+- Privilege: flag a container as root, a mounted container socket, a privileged flag, shared host namespaces, capabilities not dropped to a minimum, an agent on the application's service account, and subprocess execution with no seccomp. A mounted socket is root on the host.
+- Filesystem: flag writable bind mounts, overlap with sensitive host paths, symlinks resolving against the host, and a shared temporary directory. Neutralize hooks in a user-provided repository first: an attacker commits one and an ordinary command runs it.
+- Network: flag a sandbox reaching internal services, absent egress policy, reachable metadata endpoints (2.5), and DNS resolving internal hostnames. Unrestricted egress is an exfiltration path.
+- Credentials: pass a minimal, declared environment; never inherit the parent's. Grant no secret the agent does not need, naming database strings, cloud credentials, and signing secrets. Prefer a mediating proxy so the agent never holds a provider key.
 
 ### 2.7 Weak or Homemade Crypto
 MD5 and SHA-1 are broken and cheap to brute-force; flag them in any security-sensitive context (passwords, signatures, tokens, integrity checks, certificates, access-gating cache keys). Require SHA-256 or SHA-3 for general hashing; bcrypt, scrypt, or Argon2 with per-password salt and a stated work factor for passwords (bcrypt cost 12 or greater, argon2id at 19 MiB and 2 iterations or greater). Allow MD5/SHA-1 only for explicitly non-security uses (legacy interop, non-adversarial checksums) with a justifying code comment; otherwise flag.
@@ -95,34 +106,44 @@ Also flag:
 - JWTs with hardcoded or weak secrets, no expiry, alg none, or unverified decode. Pin the accepted algorithm: a verifier accepting both RS256 and HS256 takes the public key as an HMAC secret. Claims and revocation belong to 2.4.
 
 ### 2.8 Error Handling and Failure Modes
-- Empty catch or "except: pass" around security-relevant operations (auth, signature verification, payment) is HIGH: it fails open.
-- Flag stack traces, SQL errors, or internal paths returned to clients.
+- Empty catch or "except: pass" around security-relevant operations (auth, signature verification, payment) is HIGH: it fails open. So does validation that coerces instead of rejecting, and a sandbox falling back to unconfined execution when its container cannot start. Require the fallback equally confined, or refusal.
+- Flag stack traces, SQL errors, internal paths, hostnames, or addresses returned to clients, and handlers returning a whole exception with its context. Reject invalid input loudly with a 4xx naming the offending request field, never the internal schema, column, or business rule.
 - Verify the failure path: DB down, token expired, oversized input.
 
 ### 2.9 Race Conditions and TOCTOU
-- Flag check-then-act on money, inventory, rate limits, and uniqueness. Require DB constraints, transactions with proper isolation, or atomic operations.
+- Flag check-then-act on any shared mutable state reached concurrently: money, inventory, rate limits, uniqueness, module globals, singletons, caches, and one row or key written by request, socket, and scheduled paths alike. Require DB constraints, transactions with proper isolation, or atomic operations.
+- Lost update: read, modify, write back with no check that the value held. Require a version column, ETag, conditional update predicate, or conditional request header. Two users edit one record and the later write silently discards the earlier.
+- Require a distributed lock where work must have a single executor across instances, naming scheduled jobs and migrations, and require consumers to be idempotent and tolerant of duplicate or out-of-order delivery.
 - Flag file existence checks followed by open or write.
 
 ### 2.10 Unsafe Deserialization and Dynamic Execution
 - Flag pickle.loads, yaml.load without SafeLoader, Java native deserialization, eval or Function() on externally influenced data.
 
 ### 2.11 Resource Exhaustion and Missing Limits
-- Flag: no pagination limits, unbounded uploads, no body size limits, ReDoS-prone regexes, no timeouts on outbound calls, unbounded recursion, N+1 queries, and new public endpoints without rate limiting.
+- Flag: no pagination limits, unbounded uploads, no body size limits, ReDoS-prone regexes, no timeouts on outbound calls, unbounded recursion, N+1 queries, and new public endpoints without rate limiting. A regex is also a sink: flag an untrusted pattern reaching the engine, and require a match timeout where the runtime offers one.
+- Apply the same limits to processes and containers: memory, CPU, process count, file descriptors, execution timeout. Require cleanup on the failure path: kill on timeout, remove orphaned containers, clear temporary and lock files.
+- Flag a metered third-party key with no usage limit or spend cap; a compromised key is unbounded consumption.
 
 ### 2.12 Sensitive Data Handling
-- Flag: PII or credentials in logs, analytics, or error trackers; sensitive fields returned because the serializer dumps the whole model; tokens in URLs; session cookies missing Secure, HttpOnly, or SameSite.
+- Flag: PII or credentials in logs, analytics, or error trackers; sensitive fields returned because the serializer dumps the whole model, including internal authorization metadata such as role or is_admin; tokens in URLs; session cookies missing Secure, HttpOnly, or SameSite.
+- Flag sensitive data stored unencrypted at rest, retained with no deletion path, or collected beyond the stated purpose.
+- Flag whole-object logging, which carries headers and bodies with it; log sinks without access control; and schema introspection reachable in production.
 
 ### 2.13 Dead, Duplicated, and Frankenstein Code
 - Flag functions duplicating existing utilities (fixes reach only one copy), unreachable branches, commented-out security checks, mixed paradigms suggesting pasted fragments, and code contradicting its own comments or docstrings.
 
 ### 2.14 License and Provenance
 - Flag large verbatim-looking blocks (distinctive comments, foreign naming conventions) for human license review; they may come from copyleft sources.
+- Flag dependency licenses conflicting with the project's model, an unspecified license, and no license check in the pipeline.
 
 ### 2.15 AI/LLM Application Risks
 If the reviewed code calls an LLM or builds agents:
-- Prompt injection: flag untrusted content concatenated into prompts carrying privileged instructions or tool access. Require separation of instructions from data and least-privilege tools.
+- Prompt injection: flag untrusted content concatenated into prompts carrying privileged instructions or tool access. Require separation of instructions from data and least-privilege tools. Retrieved documents and tool output are untrusted too: label provenance, frame them as evidence, and state an instruction hierarchy. Flag role tags spoofed inside conversation history.
+- Instruction-channel integrity: the prompt is an asset, not a container. Flag a system prompt, tool definition, or template that untrusted parties can edit, that user data composes, that hot-reloads from an untrusted source, or that the agent rewrites at runtime. A tenant-editable persona field appends instructions to every other tenant's session.
+- Trust propagation: model output, tool output, memory, summaries, and reasoning traces re-enter as untrusted at the next step. Flag any consumed as system-controlled fact. A model-written summary reloaded as established fact carries the attacker's claim forward (2.5 second-order).
+- Tool boundary: schemas never accept or return credentials, output is redacted before returning to the model, and context never accumulates secrets across turns. A shell tool running env hands every secret to the model and its provider's logs.
 - Flag LLM output treated as trusted (executed, used as SQL, shell, or URL, or rendered as HTML unsanitized) and model output used for authorization decisions.
-- Flag secrets or PII sent to third-party model APIs without approval; require schema validation on structured responses.
+- Flag secrets or PII sent to third-party model APIs without approval; require strict schema validation on structured responses, rejecting unknown fields. Gate actions the model selects behind confirmation and capability and destination allowlists.
 
 ## 3. Review Workflow
 
@@ -192,7 +213,7 @@ One line, valid JSON, empty `findings` array on a clean result. The human-readab
 Do not flag:
 - Documented configuration requirements: .env.example, sample configs, README snippets with obvious placeholders (CHANGE_ME, sk-xxxx).
 - Test files with structurally fake mock credentials used only in tests.
-- Dependency CVEs that do not affect this usage: unreachable code paths or dev-only dependencies are at most LOW.
+- Dependency CVEs that do not affect this usage: unreachable code paths or dev-only dependencies are at most LOW. This exclusion is void where dev dependencies reach a production build.
 - Missing security headers on platforms that inject them (CDNs, gateways, PaaS).
 
 Verify before dismissing:

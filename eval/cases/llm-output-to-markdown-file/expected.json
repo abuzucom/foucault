@@ -1,0 +1,10 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: MEDIUM",
+  "expected_classes": [
+    "2.5",
+    "2.15"
+  ],
+  "expect_json": false,
+  "notes": "The model's report is posted verbatim into GitHub-Flavored Markdown. The model's input includes the attacker-controlled diff, so induced report text renders as images, links or mentions in the comment. An image reference discloses to an external host that a review ran and against what. Markdown is a rendering context like any other and the output needs escaping or fencing for it."
+}

@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: MEDIUM",
+  "expected_classes": [
+    "2.14"
+  ],
+  "expect_json": false,
+  "notes": "The service is stated as proprietary and the change pulls in a Ghostscript binding, whose upstream is AGPL. Linking it into a distributed proprietary product creates a compliance obligation the project has not reviewed. Nothing in the pipeline checks dependency licenses, so nothing would have surfaced this. The finding is for human license review rather than a technical fix."
+}

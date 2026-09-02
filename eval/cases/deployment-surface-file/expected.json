@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: CRITICAL",
+  "expected_classes": [
+    "2.6"
+  ],
+  "expect_json": false,
+  "notes": "Directory listing is enabled over the whole document root, and the root is a deployed checkout, so /.git and any .env, .bak or .map file under it are fetchable. A reachable /.git/config rebuilds the source tree including history. The version banner names an exact framework release, turning any published advisory for it into a targeted exploit. The fixture uses no path named in AUDIT.md, so a pass shows the served-file rule generalizes."
+}

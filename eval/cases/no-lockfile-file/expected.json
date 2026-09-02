@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: MEDIUM",
+  "expected_classes": [
+    "2.1"
+  ],
+  "expect_json": false,
+  "notes": "The repository carries no lockfile, so the caret ranges resolve fresh on every install and no two builds are guaranteed identical. A compromised or yanked patch release of either package, or of anything in their transitive trees, enters the build with no diff for a reviewer to see and no recorded state to roll back to. AUDIT.md's change-together rule does not fire here, because it assumes a lockfile exists."
+}

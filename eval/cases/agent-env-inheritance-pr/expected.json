@@ -1,0 +1,9 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": [
+    "2.6"
+  ],
+  "expect_json": true,
+  "notes": "os.environ.copy() hands the worker every variable the application process holds, so the database connection string, cloud credentials and any webhook signing secret travel into a process whose whole job is to fetch and analyze an attacker-supplied repository. The worker needs the job identifier and the repository URL. A minimal declared environment, or a mediating proxy for the provider key, removes the exposure entirely."
+}

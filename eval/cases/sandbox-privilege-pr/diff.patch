@@ -1,0 +1,13 @@
+--- a/deploy/agent.yml
++++ b/deploy/agent.yml
+@@ -1,3 +1,14 @@
++services:
++  agent:
++    image: review-agent:latest
++    privileged: true
++    pid: host
++    volumes:
++      - /var/run/docker.sock:/var/run/docker.sock
++      - /srv/repos:/work
++    environment:
++      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}

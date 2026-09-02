@@ -1,0 +1,9 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": [
+    "2.6"
+  ],
+  "expect_json": true,
+  "notes": "The container is declared as isolation for untrusted repositories and provides none. privileged drops the capability and seccomp restrictions, pid: host exposes every process on the machine, and the mounted container socket is root on the host by itself. The repository mount is writable. Any one of these makes the sandbox decorative; together the untrusted code has more authority than the application."
+}

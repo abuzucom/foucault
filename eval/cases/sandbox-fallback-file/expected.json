@@ -1,0 +1,10 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.8",
+    "2.6"
+  ],
+  "expect_json": false,
+  "notes": "The sandboxed path is correct: no network, a memory limit, a disposable container. The except branch silently discards all of it and runs the same untrusted command directly on the host with full network and no limits. Nothing raises and the warning is easy to miss in logs, so the control fails open exactly when the sandbox is unavailable. The fallback must be equally confined or must refuse."
+}

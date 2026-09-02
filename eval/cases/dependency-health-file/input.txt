@@ -1,0 +1,9 @@
+{
+  "name": "invoice-renderer",
+  "dependencies": {
+    "date-fns": "^2.29.0",
+    "dayjs": "^1.11.0",
+    "moment": "^2.29.4",
+    "left-pad-esm": "*"
+  }
+}

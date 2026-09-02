@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.9"
+  ],
+  "expect_json": false,
+  "notes": "The balance is read, modified in Python and written back with no check that it still holds the value that was read. Two concurrent credits interleave and one is silently discarded, and the same shape run deliberately in parallel is how a refund or promotional credit gets applied once and counted twice. An atomic F() expression, or an update predicated on the observed balance, closes it."
+}
