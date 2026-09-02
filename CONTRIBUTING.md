@@ -14,9 +14,17 @@ Any change to `AUDIT.md` that affects a verdict, a hard blocker (section
 confirm the case set stays structurally sound; run it with `--model-call`
 against a real model when a credential is available.
 
+Assess every incoming checklist against what `AUDIT.md` already says. Add
+nothing an existing rule already covers. Each item has one of three
+outcomes. An item already covered needs no change. An item covered in
+principle by a rule too vague to fire needs that rule extended in place. An
+item introducing a genuinely new sink, scenario, or fix needs a new rule.
+Extend by default. A parallel rule naming a sink an existing rule already
+names is a defect.
+
 Keep `AUDIT.md` terse and imperative. Do not add a rule without a stated
-exploit scenario. Keep the document under its ~5K token budget; split
-reference material out before exceeding it.
+exploit scenario. Keep the document under its 32768-character ceiling.
+Split reference material out before exceeding it.
 
 ## No build step
 

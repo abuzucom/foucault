@@ -45,7 +45,7 @@ Check every class against your review unit (section 0), not only against changed
 
 ### 2.3 Secrets in Code
 - Zero tolerance: API keys, tokens, passwords, private keys, connection strings, tokened webhook URLs, in source, tests, fixtures, comments, sample configs, or committed .env files. Check git history, not just HEAD. Includes example credentials copied from docs.
-- Flag secrets logged, in error messages, in client bundles, or passed as CLI args.
+- Flag secrets in error messages, in client bundles, or passed as CLI args.
 - Placeholders like sk-xxxx are fine. Anything with real entropy is CRITICAL; require rotation, not just deletion.
 
 ### 2.4 Missing Authentication and Authorization
@@ -57,7 +57,7 @@ Check every class against your review unit (section 0), not only against changed
 ### 2.5 Injection
 Non-negotiable: never build queries, commands, or code by concatenating or interpolating untrusted input. Use parameterization, safe APIs, or vetted escaping libraries: placeholder-parameterized queries for SQL, array-based command execution with no shell, vetted escaping where parameterization is impossible. Concatenation is a finding regardless of surrounding hand-rolled sanitization.
 
-- SQL: any concatenation, f-string, or template into a query is a finding even if inputs look safe. Require parameterized queries or the ORM's safe API. Watch raw-query escape hatches (.raw(), text(), $queryRawUnsafe); sanitization does not replace parameterization.
+- SQL: flag concatenation, f-strings, and templates into queries, even where inputs look safe. Require parameterized queries or the ORM's safe API. Watch raw-query escape hatches (.raw(), text(), $queryRawUnsafe).
 - Command: flag shell=True, exec, backticks, child_process.exec with interpolated input. Require argument arrays (execFile, subprocess.run([...])).
 - Path traversal: flag user input joined into file paths without canonicalization and prefix check.
 - XSS: flag dangerouslySetInnerHTML, innerHTML, v-html, unescaped template output, user data in inline scripts or javascript: hrefs.
@@ -71,7 +71,7 @@ Non-negotiable: never build queries, commands, or code by concatenating or inter
 - Treat comments like "TODO: add auth check", "FIXME: validate input", "HACK: temporary bypass", "for now" as confessions; verify each and flag any guarding a live code path.
 
 ### 2.7 Weak or Homemade Crypto
-No outdated hashing algorithms unless contextually justified. MD5 and SHA-1 are broken and cheap to brute-force; flag them in any security-sensitive context (passwords, signatures, tokens, integrity checks, certificates, access-gating cache keys). Require SHA-256 or SHA-3 for general hashing; bcrypt, scrypt, or Argon2 with per-password salt and appropriate work factor for passwords. Allow MD5/SHA-1 only for explicitly non-security uses (legacy interop, non-adversarial checksums) with a justifying code comment; otherwise flag.
+MD5 and SHA-1 are broken and cheap to brute-force; flag them in any security-sensitive context (passwords, signatures, tokens, integrity checks, certificates, access-gating cache keys). Require SHA-256 or SHA-3 for general hashing; bcrypt, scrypt, or Argon2 with per-password salt and appropriate work factor for passwords. Allow MD5/SHA-1 only for explicitly non-security uses (legacy interop, non-adversarial checksums) with a justifying code comment; otherwise flag.
 
 Also flag:
 - Hand-rolled crypto; tokens or IDs from Math.random()/random where unpredictability matters (require a CSPRNG such as secrets or crypto.randomBytes).
@@ -81,7 +81,7 @@ Also flag:
 
 ### 2.8 Error Handling and Failure Modes
 - Empty catch or "except: pass" around security-relevant operations (auth, signature verification, payment) is HIGH: it fails open.
-- Flag stack traces, SQL errors, or internal paths returned to clients; debug mode or verbose error pages enabled.
+- Flag stack traces, SQL errors, or internal paths returned to clients.
 - Verify the failure path: DB down, token expired, oversized input.
 
 ### 2.9 Race Conditions and TOCTOU
@@ -116,7 +116,7 @@ Run these steps against your **review unit**: the diff (PR), the file (File), th
 1. **Context.** Read the PR description and ticket; state the intended change; if unclear, request it. *(File/Wholesale: infer intent from the code and any README; Piece: take the caller's stated intent, and if none is given, state the intent you assumed.)*
 2. **Dependencies.** Diff manifests and lockfiles; verify every new or upgraded package per 2.1; inspect npm audit, pip-audit, or osv results if available. *(File/Piece: apply 2.1 only to imports visible in the unit; skip if manifests are out of scope. Wholesale: audit the whole manifest + lockfile, not just changes.)*
 3. **Surface.** Enumerate entry points. For each, verify authentication, authorization, input validation, rate limiting, and logging. *(PR: new or changed entry points. File/Wholesale: every entry point in scope. Piece: any entry point the fragment defines or touches; flag that callers are unverified.)*
-4. **Data flow.** Trace each untrusted input to sinks (2.5, 2.10, 2.12). *(Piece: trace only within the fragment; where a value enters or exits at a boundary you cannot see, state the assumption instead of clearing it.)*
+4. **Data flow.** Trace per 1.5 into the sinks of 2.5, 2.10, 2.12. *(Piece: trace only within the fragment; where a value enters or exits at a boundary you cannot see, state the assumption instead of clearing it.)*
 5. **Failure.** For each external interaction, review the error path (2.8) and limits (2.11).
 6. **Config and infra.** Diff Dockerfiles, IaC, CI workflows, env samples for 2.6 issues, over-broad IAM, and CI secrets exposure (e.g., pull_request_target checking out untrusted code). *(Non-PR: review whatever config/infra is in scope; note if none is visible. Piece: usually N/A.)*
 7. **Consistency.** Check for duplication, style discontinuities, comments contradicting code, tests asserting nothing (2.13, section 4).
