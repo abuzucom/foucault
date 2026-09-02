@@ -1,0 +1,9 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": [
+    "2.5"
+  ],
+  "expect_json": true,
+  "notes": "External general entities are explicitly enabled on a parser fed the raw request body. An entity referencing file:///etc/passwd or an internal URL reads local files and reaches internal services. Section 5 makes this an automatic block. The fixture uses xml.sax rather than lxml so a passing result shows the rule generalizes beyond the parser named in AUDIT.md."
+}

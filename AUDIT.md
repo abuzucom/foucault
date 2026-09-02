@@ -46,6 +46,7 @@ Check every class against your review unit (section 0), not only against changed
 ### 2.3 Secrets in Code
 - Zero tolerance: API keys, tokens, passwords, private keys, connection strings, tokened webhook URLs, in source, tests, fixtures, comments, sample configs, or committed .env files. Check git history, not just HEAD. Includes example credentials copied from docs.
 - Flag secrets in error messages, in client bundles, or passed as CLI args.
+- Keys belong in a secret manager or an injected environment, never in source, an image layer, or client storage. Flag a long-lived key with no rotation path, and one key reused across environments or shared between an application and the agents it runs.
 - Placeholders like sk-xxxx are fine. Anything with real entropy is CRITICAL; require rotation, not just deletion.
 
 ### 2.4 Missing Authentication and Authorization
@@ -59,10 +60,16 @@ Non-negotiable: never build queries, commands, or code by concatenating or inter
 
 - SQL: flag concatenation, f-strings, and templates into queries, even where inputs look safe. Require parameterized queries or the ORM's safe API. Watch raw-query escape hatches (.raw(), text(), $queryRawUnsafe).
 - Command: flag shell=True, exec, backticks, child_process.exec with interpolated input. Require argument arrays (execFile, subprocess.run([...])).
-- Path traversal: flag user input joined into file paths without canonicalization and prefix check.
-- XSS: flag dangerouslySetInnerHTML, innerHTML, v-html, unescaped template output, user data in inline scripts or javascript: hrefs.
+- Path traversal: flag user input joined into file paths without canonicalization and prefix check. Decode before canonicalizing. Archive entry names and symlink targets are user input too.
+- XSS: flag dangerouslySetInnerHTML, innerHTML, v-html, unescaped template output, user data in inline scripts or javascript: hrefs. Cover reflected, stored, and DOM sources alike; escaping matches the sink context. Non-browser sinks count: markdown posted to an issue tracker, chat markup, and HTML mail all render what you send them. Allowlist schemes on any rendered link.
 - SSRF: flag user-supplied URLs fetched server-side without an allowlist and blocking of internal ranges and metadata endpoints (169.254.169.254).
-- Check template, header, log (CRLF), and NoSQL operator injection ({"$gt": ""}) wherever user data reaches those sinks.
+- Template: flag user input reaching a template compiler rather than a template's data (render_template_string, a Template built from a request). Server-side template injection reaches the object graph and becomes RCE.
+- XXE: flag untrusted XML parsed with DTD or external-entity resolution enabled. An entity reads local files and reaches internal endpoints. Require a hardened parser and cap entity expansion.
+- Open redirect: flag a redirect target taken from user input without an allowlist, and validation by prefix or substring match. An attacker-controlled next parameter lands a logged-in user on a credential harvester.
+- Second-order: a value stored safely re-enters as untrusted at the next sink. Trace stored data forward, not only request data inward. A username inserted through a parameterized query still injects when a later report concatenates it.
+- Uploads: validate what a file is, not what it claims. Check content over extension, re-process or reject active content, never store under a user-supplied name or in an executable path. Size belongs to 2.11, path to the traversal rule above.
+- Content type: verify the request type matches the parser invoked and reject rather than sniff. Set an explicit response type. A JSON endpoint that also parses XML reopens XXE however well the JSON path is hardened.
+- Check header, log (CRLF), LDAP filter and DN, XPath, and NoSQL operator injection ({"$gt": ""}) wherever user data reaches those sinks.
 
 ### 2.6 Insecure Defaults and Demo Config in Prod
 - Flag: CORS * (especially with credentials), verify=False or disabled TLS validation, DEBUG=True, weak or missing CSP, disabled CSRF, 0.0.0.0 binds, open buckets, chmod 777, allow-all firewall or IAM rules, default admin passwords.
@@ -136,6 +143,7 @@ If the review unit exceeds review capacity, prioritize entry points, auth, and d
 - MD5 or SHA-1 for password storage or signature/token verification.
 - Disabled TLS verification, disabled auth middleware, or disabled CSRF on state-changing routes.
 - eval, pickle.loads, or unsafe YAML on externally influenced data.
+- XML from externally influenced input parsed with external entities or DTDs enabled.
 - New dependency unverifiable on the official registry.
 - Data-mutating endpoint with no authorization check.
 - alg none or unverified JWT decode used for auth.

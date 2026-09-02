@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.5"
+  ],
+  "expect_json": false,
+  "notes": "The insert is correctly parameterized, so the stored value looks trusted. usage_report then concatenates it into a second query. A display name containing a quote injects there. This is the case a reviewer tracing only request input to sinks misses, because the source is a database row."
+}

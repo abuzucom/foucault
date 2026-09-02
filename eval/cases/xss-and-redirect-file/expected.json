@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.5"
+  ],
+  "expect_json": false,
+  "notes": "Two findings. The fragment identifier flows into innerHTML, which is DOM-based XSS with no server round trip. Separately the next parameter is validated by prefix, so https://app.example.com.attacker.test passes and redirects an authenticated user to a credential harvester. Prefix matching is the specific failure the open-redirect rule names."
+}
