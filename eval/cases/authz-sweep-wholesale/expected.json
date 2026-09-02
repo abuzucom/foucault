@@ -1,0 +1,9 @@
+{
+  "mode": "Wholesale",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.4"
+  ],
+  "expect_json": false,
+  "notes": "Three findings the sweep is meant to surface. The export route is the one of four missing require_login, so an unauthenticated caller reads any report as CSV; the decorator is present everywhere else, which is what makes the gap easy to miss. get_report and export_report both load by identifier without checking the caller owns the report, so the substitution test fails. The admin reimburse route carries the same guard as user-facing routes, so any logged-in user creates a payout. Authorization is scattered inline rather than centralized, which is why one route drifted."
+}
