@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: CRITICAL",
+  "expected_classes": [
+    "2.7"
+  ],
+  "expect_json": false,
+  "notes": "Two failures. bcrypt at 6 rounds is roughly sixty times cheaper to attack than the current floor, so the hash column falls to offline cracking. Worse, a reversible copy of every plaintext password is stored alongside it, so one key disclosure surrenders every credential and the hashing is irrelevant. Encryption is not hashing, and a support-desk requirement does not change that."
+}

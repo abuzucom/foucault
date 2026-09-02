@@ -77,19 +77,22 @@ Non-negotiable: never build queries, commands, or code by concatenating or inter
 - Check header, log (CRLF), LDAP filter and DN, XPath, and NoSQL operator injection ({"$gt": ""}) wherever user data reaches those sinks.
 
 ### 2.6 Insecure Defaults and Demo Config in Prod
-- Flag: CORS * (especially with credentials), verify=False or disabled TLS validation, DEBUG=True, weak or missing CSP, disabled CSRF, 0.0.0.0 binds, open buckets, chmod 777, allow-all firewall or IAM rules, default admin passwords.
+- Flag: CORS * (especially with credentials), verify=False or disabled TLS validation, an outdated minimum TLS version or an unvetted cipher list, DEBUG=True, weak or missing CSP, disabled CSRF, 0.0.0.0 binds, open buckets, chmod 777, allow-all firewall or IAM rules, default admin passwords.
 - Flag boilerplate without security customization: default middleware, untouched scaffolding settings, sample configs promoted to real configs.
 - Flag test code, seed data, or test endpoints reachable in production, and feature flags that disable security controls and default to disabled.
 - Treat comments like "TODO: add auth check", "FIXME: validate input", "HACK: temporary bypass", "for now" as confessions; verify each and flag any guarding a live code path.
 
 ### 2.7 Weak or Homemade Crypto
-MD5 and SHA-1 are broken and cheap to brute-force; flag them in any security-sensitive context (passwords, signatures, tokens, integrity checks, certificates, access-gating cache keys). Require SHA-256 or SHA-3 for general hashing; bcrypt, scrypt, or Argon2 with per-password salt and appropriate work factor for passwords. Allow MD5/SHA-1 only for explicitly non-security uses (legacy interop, non-adversarial checksums) with a justifying code comment; otherwise flag.
+MD5 and SHA-1 are broken and cheap to brute-force; flag them in any security-sensitive context (passwords, signatures, tokens, integrity checks, certificates, access-gating cache keys). Require SHA-256 or SHA-3 for general hashing; bcrypt, scrypt, or Argon2 with per-password salt and a stated work factor for passwords (bcrypt cost 12 or greater, argon2id at 19 MiB and 2 iterations or greater). Allow MD5/SHA-1 only for explicitly non-security uses (legacy interop, non-adversarial checksums) with a justifying code comment; otherwise flag.
 
 Also flag:
-- Hand-rolled crypto; tokens or IDs from Math.random()/random where unpredictability matters (require a CSPRNG such as secrets or crypto.randomBytes).
-- Passwords hashed with a plain fast hash, even SHA-256, instead of a KDF.
-- ECB mode, static or reused IVs/nonces, hardcoded salts, secrets compared with == instead of constant-time comparison.
-- JWTs with hardcoded or weak secrets, no expiry, alg none, or unverified decode.
+- Hand-rolled crypto; tokens or IDs from Math.random()/random where unpredictability matters (require a CSPRNG such as secrets or crypto.randomBytes). A generator seeded from a fixed or guessable value is not a CSPRNG.
+- Passwords hashed with a plain fast hash, even SHA-256, instead of a KDF, or stored reversibly. Encrypted is not hashed: a decryptable store loses every credential at once.
+- Construction: prefer authenticated encryption. Flag ECB, unauthenticated CBC, textbook or legacy padding, and MAC-then-encrypt. Static or reused IVs/nonces and hardcoded salts stay findings. Unauthenticated CBC gives a padding oracle that decrypts the record.
+- Primitive strength: flag primitives below current recommendation, anchoring on DES, RSA below 2048, and curves below 256. Covers ciphers, key sizes, named curves, and key-exchange parameters together.
+- Integrity: require a verified MAC or signature on anything that must not be tampered with, naming tokens, cookies, and inter-service messages. Flag a truncated MAC and length extension on a naive keyed hash; require HMAC.
+- Comparison: secrets compared with == instead of a constant-time routine (crypto.timingSafeEqual, hmac.compare_digest, subtle.ConstantTimeCompare). Flag early-return credential checks, which leak the secret one position at a time.
+- JWTs with hardcoded or weak secrets, no expiry, alg none, or unverified decode. Pin the accepted algorithm: a verifier accepting both RS256 and HS256 takes the public key as an HMAC secret. Claims and revocation belong to 2.4.
 
 ### 2.8 Error Handling and Failure Modes
 - Empty catch or "except: pass" around security-relevant operations (auth, signature verification, payment) is HIGH: it fails open.

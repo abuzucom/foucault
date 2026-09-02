@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.7"
+  ],
+  "expect_json": false,
+  "notes": "MAC-then-encrypt: the tag is computed over the plaintext and sealed inside the ciphertext, so unseal must decrypt attacker-supplied bytes before it can authenticate anything. Padding errors during that decrypt are observable, which is a padding oracle that recovers the plaintext. The MAC is also truncated to 64 bits, and the comparison uses == rather than a constant-time routine. AES-GCM would remove all three failures."
+}

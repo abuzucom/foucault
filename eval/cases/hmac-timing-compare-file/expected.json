@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: MEDIUM",
+  "expected_classes": [
+    "2.7"
+  ],
+  "expect_json": false,
+  "notes": "The digest is correct and the comparison is not. Returning on the first mismatched character makes verification time proportional to the length of the matching prefix, so an attacker recovers the signature one character at a time across repeated requests and then forges webhooks. hmac.compare_digest exists for exactly this. The early-return shape is the specific pattern the comparison rule names, and it is easy to read as careful code."
+}
