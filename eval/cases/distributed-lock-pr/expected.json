@@ -1,0 +1,9 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": [
+    "2.9"
+  ],
+  "expect_json": true,
+  "notes": "The context states three replicas and the scheduler is in-process, so the job fires once per replica at the same hour with no coordination. Every account is charged up to three times and mailed as many. The loop is also not idempotent: nothing records that an account was already processed, so a retry repeats the charge. Work that must have one executor needs a distributed lock or a claim recorded in the database. Severity is HIGH, so principle 1.7 makes the PR verdict BLOCK."
+}

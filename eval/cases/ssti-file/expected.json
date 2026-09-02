@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: CRITICAL",
+  "expected_classes": [
+    "2.5"
+  ],
+  "expect_json": false,
+  "notes": "The tenant_banner parameter is substituted into the template source before compilation, so user input becomes template syntax rather than template data. Jinja expression syntax reaches the object graph and becomes remote code execution. The name parameter is passed correctly as data, which is the contrast the case depends on."
+}

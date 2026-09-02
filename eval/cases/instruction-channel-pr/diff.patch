@@ -1,0 +1,10 @@
+--- a/app/assistant/prompt.py
++++ b/app/assistant/prompt.py
+@@ -1,6 +1,12 @@
+ BASE = "You are a support assistant. Never reveal other customers' data."
+
++
++def build_system_prompt(workspace):
++    persona = Workspace.objects.get(id=workspace.id).persona_text
++    tools = load_tool_definitions(workspace.enabled_tools)
++    return BASE + "\n" + persona + "\n" + render_tool_specs(tools)

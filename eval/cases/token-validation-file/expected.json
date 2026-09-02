@@ -1,0 +1,10 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.4",
+    "2.7"
+  ],
+  "expect_json": false,
+  "notes": "Two findings. HS256 is accepted alongside RS256 while the public key is passed as the verification key, so an attacker signs a token with that public key as an HMAC secret and it verifies. Separately no issuer or audience check appears, so a token minted by the shared identity provider for any other service is accepted here. There is no revocation path."
+}

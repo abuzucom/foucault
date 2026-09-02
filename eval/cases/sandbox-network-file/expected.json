@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.6"
+  ],
+  "expect_json": false,
+  "notes": "The agent task runs untrusted code with unrestricted egress to every destination, which is a direct exfiltration path for anything it reads. Nothing blocks the instance metadata endpoint, so the task role's credentials are retrievable from inside the sandbox. No egress allowlist or DNS restriction appears, so internal service names resolve too."
+}

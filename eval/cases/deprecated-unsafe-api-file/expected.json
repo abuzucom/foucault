@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: MEDIUM",
+  "expected_classes": [
+    "2.2"
+  ],
+  "expect_json": false,
+  "notes": "new Buffer(size) allocates without zeroing, so the region past the copied header still holds whatever the process last had there and is sent to the peer. The API was deprecated for exactly this and Buffer.alloc replaces it. The lint suppression is the second half of the finding: the tooling reported the problem and the comment silenced it rather than resolving it."
+}

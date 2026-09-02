@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.5"
+  ],
+  "expect_json": false,
+  "notes": "Member names come from an attacker-supplied archive and are joined to the target directory with no canonicalization or prefix check. An entry named ../../etc/cron.d/job writes outside the extraction root, and a symlink member redirects later writes. The path rule already governs this sink. The archive entry is the source a reviewer does not classify as user input."
+}

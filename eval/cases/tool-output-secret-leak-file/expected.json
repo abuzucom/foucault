@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.15"
+  ],
+  "expect_json": false,
+  "notes": "The tool schema takes a connection string as a model-supplied parameter, so a credential travels through the model and into the provider's logs by design. dispatch returns raw stdout with no redaction, so a model-selected command such as env returns every secret in the process environment to the model. The same call is also shell=True on model output, which is 2.5."
+}

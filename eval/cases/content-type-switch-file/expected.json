@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.5"
+  ],
+  "expect_json": false,
+  "notes": "The declared Content-Type is never consulted. The parser is chosen by sniffing the first byte, so a client posting XML to a JSON endpoint reaches the XML path. defusedxml is imported but unused, and the unhardened ElementTree runs instead. Hardening every parser a reviewer knows about does not help when the dispatch itself is attacker-chosen."
+}

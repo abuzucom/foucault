@@ -1,0 +1,9 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": [
+    "2.5"
+  ],
+  "expect_json": true,
+  "notes": "Three failures in one handler. The type check reads the extension rather than the content, so any bytes pass under an allowed suffix. SVG is accepted and rendered by browsers as active content carrying script. The client-supplied filename is joined into a web-served directory without canonicalization, so a traversal sequence or a double extension writes outside the avatar path."
+}

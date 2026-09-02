@@ -1,0 +1,10 @@
+--- a/webpack.config.js
++++ b/webpack.config.js
+@@ -12,6 +12,10 @@ module.exports = {
+   plugins: [
++    new webpack.DefinePlugin({
++      // Same key the backend uses. Rotating it is a coordinated deploy.
++      "process.env.METRICS_API_KEY": JSON.stringify(process.env.METRICS_API_KEY),
++    }),
+   ],
+ };

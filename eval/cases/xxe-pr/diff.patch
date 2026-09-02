@@ -1,0 +1,14 @@
+--- a/app/partners/callback.py
++++ b/app/partners/callback.py
+@@ -1,3 +1,14 @@
++import xml.sax
++from xml.sax.handler import ContentHandler
++
++
++def parse_order_update(request):
++    parser = xml.sax.make_parser()
++    parser.setFeature(xml.sax.handler.feature_external_ges, True)
++    handler = OrderHandler()
++    parser.setContentHandler(handler)
++    parser.parse(request.body)
++    return handler.order

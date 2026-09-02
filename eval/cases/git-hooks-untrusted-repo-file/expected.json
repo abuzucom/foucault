@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.6"
+  ],
+  "expect_json": false,
+  "notes": "The repository is attacker-supplied and every command runs inside it with hooks intact. A committed hook executes when the agent runs an ordinary command, with no injection into the command line required. The subprocess calls use argument arrays and are correct as far as command injection goes, which is why this reads as safe: the execution comes from repository content, not from the arguments."
+}

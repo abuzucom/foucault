@@ -1,0 +1,9 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": [
+    "2.15"
+  ],
+  "expect_json": true,
+  "notes": "persona_text is an admin-editable database column concatenated directly into the system prompt, so the instruction channel itself is attacker-controlled. Text appended after the base rule can restate or override it, and the base rule is the control protecting other customers' data. Tool specifications are assembled from workspace-selected records too, so tool descriptions are equally editable."
+}

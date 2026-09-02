@@ -1,0 +1,9 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": [
+    "2.3"
+  ],
+  "expect_json": true,
+  "notes": "DefinePlugin inlines the value at build time, so the key ships in the browser bundle and is readable by anyone loading the page. The comment also states the key is shared with the backend and has no independent rotation path, which is the reuse and rotation half of the custody rule. No literal credential appears in the fixture."
+}

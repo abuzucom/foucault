@@ -1,0 +1,10 @@
+--- a/app/jobs/spawn.py
++++ b/app/jobs/spawn.py
+@@ -1,3 +1,11 @@
++def spawn_worker(job):
++    env = os.environ.copy()
++    env["JOB_ID"] = job.id
++    return subprocess.Popen(
++        ["python", "-m", "worker", job.repo_url],
++        env=env,
++    )

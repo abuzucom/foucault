@@ -1,0 +1,11 @@
+server {
+  listen 443 ssl;
+  root /srv/www/app;
+
+  location / {
+    autoindex on;
+    try_files $uri $uri/ /index.html;
+  }
+
+  add_header X-Powered-By "Express 4.17.1";
+}

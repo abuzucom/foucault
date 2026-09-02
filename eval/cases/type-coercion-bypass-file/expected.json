@@ -1,0 +1,10 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.4",
+    "2.5"
+  ],
+  "expect_json": false,
+  "notes": "Two failures. resetPassword validates req.body but then reads newPassword off the raw body, a field the schema never declares. Joi strips unknown keys from value and leaves req.body untouched, so the one value that changes the password is the one value never validated. A non-strict schema also accepts the extra property silently rather than rejecting the request. findAccount passes req.query.ownerId straight into a query; Express parses ?ownerId[$ne]= into an object, so the value reaching Mongoose is an operator rather than the string the code assumes, returning another tenant's account. Both are the same root cause: the value the handler uses is not the value that was checked."
+}

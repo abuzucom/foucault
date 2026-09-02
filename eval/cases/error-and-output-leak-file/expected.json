@@ -1,0 +1,10 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: MEDIUM",
+  "expected_classes": [
+    "2.8",
+    "2.12"
+  ],
+  "expect_json": false,
+  "notes": "The rejection is correct in shape, a 400 rather than silent coercion, and wrong in content: it returns the internal column name and the failing statement, handing an attacker the schema one request at a time. The reconciled rule is to name the offending request field and nothing internal. Separately to_dict serializes the whole model back to the caller, which carries any role or is_admin column with it."
+}

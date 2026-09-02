@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.15"
+  ],
+  "expect_json": false,
+  "notes": "read_repo returns attacker-controlled repository content, and the model's own summary of it is stored and reloaded on the next run as a known-good baseline. Model output re-enters as system-controlled fact, so an injected claim in the repository persists into later runs after the original text is gone. This is second-order injection in the prompt channel: the store is safe, the read is not."
+}

@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: NONE-FOUND",
+  "expected_classes": [
+    "3"
+  ],
+  "expect_json": false,
+  "notes": "Correct, self-contained formatting code. No entry point, no query, no shell, no filesystem, no XML, no upload, no cryptography, no model call, no dependency change, no concurrency, and no secret. Nearly every class is out of scope under step 0. The pass condition is a clean result that names those classes as not applicable. Two failures are possible and both matter: inventing a finding against a class that never applied, or claiming those classes were reviewed and clean, which is a different and false claim. This case guards the noise thirteen new rules and four sweeps could otherwise introduce."
+}
