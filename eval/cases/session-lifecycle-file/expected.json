@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.4"
+  ],
+  "expect_json": false,
+  "notes": "The session identifier is never rotated. login writes into whatever session the request arrived with, so an attacker who plants a known session cookie holds an authenticated session afterwards. elevate_to_admin raises privilege in place without rotation. logout clears one key client-side and never invalidates the session server-side, so a captured cookie stays usable. No idle or absolute expiry appears."
+}

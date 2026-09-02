@@ -1,0 +1,9 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": [
+    "2.4"
+  ],
+  "expect_json": true,
+  "notes": "No state parameter is sent or checked, so an attacker completes a flow with their own code and binds the victim's session to the attacker's account. The redirect_uri is taken from a request parameter rather than an allowlist, so the code is deliverable to an attacker-chosen host. The context states this is a public client with no secret, so PKCE is required and absent."
+}
