@@ -1,0 +1,62 @@
+name: ci
+
+# Runs the gates AGENTS.md and CONTRIBUTING.md describe. Before this workflow
+# existed they were enforced only by the Claude Code hooks and at pre-push, so
+# a contributor without the hooks, or a pull request opened through the web UI,
+# bypassed all of them.
+#
+# Everything here is standard library Python. No dependency installation, and
+# no third-party action beyond a SHA-pinned checkout.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # check_git_identity.py walks the commit range, so the base commit
+          # has to be present.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Branch name
+        run: python3 scripts/check_branch_name.py
+
+      - name: Git identity
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/check_git_identity.py --base "$BASE_SHA" --head "$HEAD_SHA"
+
+      - name: Eval corpus
+        # Structure only. This repository ships no model credential, and
+        # --model-call resolves to an importable module and executes its code,
+        # so it must never be fed from pull request content.
+        run: python3 eval/run_eval.py
+
+      - name: Hook tests
+        run: python3 -m unittest discover -s tests
+
+      - name: Upstream drift
+        run: python3 scripts/check_upstream_drift.py --check-local
+
+      - name: Prose style
+        # AUDIT.md is deliberately absent. AGENTS.md exempts it: it is a
+        # second-person system prompt, not this repository's governance prose.
+        run: |
+          set -euo pipefail
+          files="AGENTS.md README.md CHANGELOG.md CONTRIBUTING.md SECURITY.md"
+          files="$files eval/README.md adopters/README.md"
+          for doc in docs/*.md; do files="$files $doc"; done
+          for checker in check_ascii lint_style check_us_spelling check_english_only check_hedging; do
+            echo "== $checker"
+            # shellcheck disable=SC2086
+            python3 "scripts/$checker.py" $files
+          done

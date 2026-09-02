@@ -9,7 +9,12 @@ name: security-review
 #       with:
 #         audit_ref: "<the same full-commit-sha>"
 #         model_call_command: "python ci/call_model.py"
-#       secrets: inherit
+#       secrets:
+#         MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
+#
+# Pass only the credential model_call_command needs. Never use
+# `secrets: inherit`: this job runs a model over an untrusted pull request
+# diff, and inherit hands it every secret the calling repository holds.
 #
 # Pin both `uses:` and `audit_ref` to the same full commit SHA (never a tag
 # or branch). Record the release version in a comment beside the pin.
@@ -86,12 +91,15 @@ jobs:
         env:
           AUDIT_PROMPT_FILE: .foucault/AUDIT.md
           CASE_TEXT_FILE: case_text.txt
+          MODEL_CALL_COMMAND: ${{ inputs.model_call_command }}
         run: |
           set -euo pipefail
-          ${{ inputs.model_call_command }} > response.txt
+          eval "$MODEL_CALL_COMMAND" > response.txt
 
       - name: Parse verdict
         id: verdict
+        env:
+          FAIL_ON_BLOCK: ${{ inputs.fail_on_block }}
         run: |
           set -euo pipefail
           line="$(grep -E '^(VERDICT|RISK(\s\(partial\))?):' response.txt | head -1 || true)"
@@ -105,7 +113,7 @@ jobs:
             echo "$line"
             echo "$delimiter"
           } >> "$GITHUB_OUTPUT"
-          if [ "${{ inputs.fail_on_block }}" = "true" ] && printf '%s' "$line" | grep -q 'BLOCK'; then
+          if [ "$FAIL_ON_BLOCK" = "true" ] && printf '%s' "$line" | grep -q 'BLOCK'; then
             echo "blocked=true" >> "$GITHUB_OUTPUT"
           else
             echo "blocked=false" >> "$GITHUB_OUTPUT"
@@ -117,7 +125,15 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const body = fs.readFileSync('response.txt', 'utf8');
+            const raw = fs.readFileSync('response.txt', 'utf8');
+            // The report is model output shaped by an attacker-controlled diff.
+            // Fence it so markdown cannot render images, links or mentions.
+            // The fence outruns the longest backtick run in the report, so a
+            // fenced block inside it cannot close the wrapper early.
+            const runs = raw.match(/`+/g) || [];
+            const longest = runs.reduce((n, s) => Math.max(n, s.length), 0);
+            const fence = '`'.repeat(Math.max(3, longest + 1));
+            const body = `${fence}\n${raw}\n${fence}`;
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,

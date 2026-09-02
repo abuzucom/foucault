@@ -29,6 +29,12 @@ user-turn message, and returns the model's raw text response. Wire it to
 whichever provider and model an `AUDIT.md` deployment actually uses. This
 repository does not prescribe one.
 
+`--model-call` resolves to an importable module and executes its code. Treat
+it as a trusted input. Supply it only from a local invocation or a CI
+configuration under this repository's control, never from pull request content
+or any other value an outside contributor can influence. `ci.yml` never passes
+it.
+
 Without `--model-call`, the script runs structure-only. It confirms every
 `expected.json` and fixture file parses and is internally consistent, then
 exits 0. This is what runs in this repository's own CI, since foucault
