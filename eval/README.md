@@ -77,3 +77,42 @@ rule instead (`clean-*` cases), never copied from a real system.
 | `piece-fragment-unseen-caller` | Piece | section 6, never a clean verdict when safety depends on unseen code |
 | `clean-parameterized-query-pr` | PR | section 8, a parameterized query is not a finding |
 | `clean-file-wholesale` | File | section 9, zero-findings protocol on genuinely clean code |
+| `xxe-pr` | PR | 2.5, external entities enabled, hard blocker |
+| `ssti-file` | File | 2.5, user input compiled as a template |
+| `xss-and-redirect-file` | File | 2.5, DOM sink and a prefix-matched redirect |
+| `key-custody-pr` | PR | 2.3, provider key inlined into a browser bundle |
+| `second-order-injection-file` | File | 2.5, safe write, unsafe later read |
+| `ldap-filter-injection-file` | File | 2.5, query construction outside SQL |
+| `upload-validation-pr` | PR | 2.5, extension-only typing into a served path |
+| `content-type-switch-file` | File | 2.5, parser chosen by sniffing the body |
+| `zip-slip-file` | File | 2.5, archive entry names as an unrecognized source |
+| `session-lifecycle-file` | File | 2.4, no rotation, no server-side invalidation |
+| `token-validation-file` | File | 2.4/2.7, algorithm confusion and absent claims |
+| `delegated-authz-pr` | PR | 2.4, no state, no PKCE, caller-supplied redirect |
+| `credential-path-file` | File | 2.4, second factor bypassed by a parallel route |
+| `type-coercion-bypass-file` | File | 2.4/2.5, the checked value is not the used value |
+| `password-storage-file` | File | 2.7, work factor below floor plus a reversible copy |
+| `primitive-strength-file` | File | 2.7, unnamed weak cipher and an undersized key |
+| `crypto-construction-file` | File | 2.7, MAC-then-encrypt padding oracle |
+| `hmac-timing-compare-file` | File | 2.7, early-return digest comparison |
+| `deployment-surface-file` | File | 2.6, directory listing, reachable dotfiles, version banner |
+| `error-and-output-leak-file` | File | 2.8/2.12, correct rejection leaking internals |
+| `data-lifecycle-file` | File | 2.12, unencrypted at rest, no deletion path, whole-object logging |
+| `instruction-channel-pr` | PR | 2.15, system prompt composed from tenant data |
+| `agent-trust-propagation-file` | File | 2.15, model output reloaded as fact |
+| `rag-provenance-file` | File | 2.15, retrieved chunks with an inverted hierarchy |
+| `sandbox-privilege-pr` | PR | 2.6, privileged container with a mounted socket |
+| `git-hooks-untrusted-repo-file` | File | 2.6, hooks in a user-supplied repository |
+| `sandbox-network-file` | File | 2.6, unrestricted egress and reachable metadata |
+| `sandbox-fallback-file` | File | 2.8/2.6, sandbox degrading to host execution |
+| `agent-env-inheritance-pr` | PR | 2.6, worker inheriting the full parent environment |
+| `tool-output-secret-leak-file` | File | 2.15, credentials through the tool boundary |
+| `llm-output-to-markdown-file` | File | 2.5/2.15, model output rendered into markdown |
+| `no-lockfile-file` | File | 2.1, no lockfile at all |
+| `dependency-health-file` | File | 2.1, overlapping, unmaintained and unpinned packages |
+| `copyleft-dependency-file` | File | 2.14, copyleft dependency in a proprietary product |
+| `deprecated-unsafe-api-file` | File | 2.2, unsafe superseded API with the warning suppressed |
+| `lost-update-file` | File | 2.9, read-modify-write with no concurrency check |
+| `distributed-lock-pr` | PR | 2.9, scheduled job without a single executor |
+| `authz-sweep-wholesale` | Wholesale | section 3, one route of four missing its guard |
+| `inapplicable-classes-file` | File | section 3 step 0, classes that do not apply are not findings |
