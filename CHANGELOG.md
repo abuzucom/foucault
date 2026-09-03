@@ -28,6 +28,23 @@ into a deployment.
   and logging configuration.
 - Thirty-nine `eval/cases/` fixtures, one per new idea, using instances the
   source checklists did not name so a pass shows the rule generalized.
+- `eval/cases/policy-reinjection-hook-pr`: a hook that re-delivers a
+  repository's own `AGENTS.md` to its own agent session. The pass condition
+  is a clean verdict. The delivery mechanism for the trusted channel is not
+  untrusted content entering it.
+
+### Fixed
+
+- `AUDIT.md` section 7 requires a real location in the review target for
+  every finding. A lifecycle hook's injected context, this system prompt, a
+  synchronized `CLAUDE.md`, and tool output all place text in the review
+  session that the target does not contain. Section 6 demands `file:line`.
+  An agent flagging session-context text under section 7 invented a file and
+  a commit hash to satisfy the format. The resulting HIGH finding directed a
+  maintainer to rewrite history against a commit that did not exist. Section
+  8 gains the matching false-positive entry. Two checks bound it. A hook
+  resolving its policy root by upward search remains a finding. Identical
+  directive text committed into a reviewed file remains a finding.
 
 ### Changed
 

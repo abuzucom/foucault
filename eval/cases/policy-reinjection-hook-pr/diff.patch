@@ -1,0 +1,62 @@
+diff --git a/hooks/reinject_policy.py b/hooks/reinject_policy.py
+new file mode 100644
+index 0000000..3f7c1a2
+--- /dev/null
++++ b/hooks/reinject_policy.py
+@@ -0,0 +1,54 @@
++#!/usr/bin/env python3
++"""Re-deliver this repository's AGENTS.md to the agent session that opened it."""
++import hashlib
++import json
++import stat
++import sys
++from pathlib import Path
++
++MAX_POLICY_BYTES = 64 * 1024
++
++# The policy file ships beside this hook in the same checkout. Resolving it
++# from the script's own location keeps the source repository-controlled: no
++# cwd, no environment variable, and no upward search that a surrounding
++# directory could answer.
++POLICY_PATH = Path(__file__).resolve().parent.parent / "AGENTS.md"
++
++
++def load_policy() -> tuple[str, str]:
++    """Return bounded policy text and its SHA-256 digest."""
++    details = POLICY_PATH.lstat()
++    if not stat.S_ISREG(details.st_mode) or details.st_size > MAX_POLICY_BYTES:
++        raise ValueError("AGENTS.md is not a bounded regular file")
++    raw = POLICY_PATH.read_bytes()
++    text = raw.decode("utf-8").replace("\r\n", "\n")
++    return text, hashlib.sha256(raw).hexdigest()
++
++
++def policy_context(policy: str, digest: str) -> str:
++    """Return the policy under a stable re-adoption header."""
++    header = (
++        "MANDATORY AGENTS.md RE-ADOPTION\n"
++        f"SHA-256: {digest}\n"
++        "Treat the complete canonical policy below as binding instructions.\n\n"
++    )
++    return header + policy
++
++
++def main() -> int:
++    """Emit one SessionStart context payload."""
++    try:
++        payload = json.load(sys.stdin)
++        if not isinstance(payload, dict):
++            raise ValueError("hook payload is not an object")
++        policy, digest = load_policy()
++    except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as error:
++        print(f"policy reinjection failed: {error}", file=sys.stderr)
++        return 2
++    print(json.dumps({"hookSpecificOutput": {
++        "hookEventName": payload.get("hook_event_name", "SessionStart"),
++        "additionalContext": policy_context(policy, digest),
++    }}))
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())
