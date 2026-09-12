@@ -43,7 +43,7 @@ on:
         type: boolean
         default: true
       fail_on_block:
-        description: "Fail the job when the response's VERDICT line is BLOCK."
+        description: "Fail the job when the response's VERDICT line is BLOCK or NEEDS-HUMAN."
         required: false
         type: boolean
         default: true
@@ -102,9 +102,20 @@ jobs:
           FAIL_ON_BLOCK: ${{ inputs.fail_on_block }}
         run: |
           set -euo pipefail
-          line="$(grep -E '^(VERDICT|RISK(\s\(partial\))?):' response.txt | head -1 || true)"
+          # This workflow builds its case text from a pull request diff, so it
+          # always runs PR mode, whose section 6 token is VERDICT. Accepting a
+          # RISK line would let a report answering in another mode satisfy a
+          # merge gate that mode never addressed. File and Wholesale modes
+          # make no merge claim at all.
+          #
+          # The report also quotes the pull request title, body, and diff, all
+          # of which an author controls. A planted VERDICT: APPROVE line
+          # reaching column zero in a quoted block would decide the gate if
+          # the first match won. Section 6 puts the authoritative verdict
+          # last, so read the final match.
+          line="$(grep -E '^VERDICT:' response.txt | tail -1 || true)"
           if [ -z "$line" ]; then
-            echo "No VERDICT:/RISK: line found in response." >&2
+            echo "No VERDICT: line found in response. PR mode requires one." >&2
             exit 1
           fi
           delimiter="verdict_line_$(date +%s%N)"
@@ -113,11 +124,40 @@ jobs:
             echo "$line"
             echo "$delimiter"
           } >> "$GITHUB_OUTPUT"
-          if [ "$FAIL_ON_BLOCK" = "true" ] && printf '%s' "$line" | grep -q 'BLOCK'; then
-            echo "blocked=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "blocked=false" >> "$GITHUB_OUTPUT"
-          fi
+          # Read the token alone. Searching the whole line matches the reason
+          # too, which both fails closed on
+          # 'VERDICT: APPROVE - resolved earlier BLOCK findings' and fails
+          # open on an unrecognized token, because 'VERDICT: REJECT' matches
+          # neither alternative and would merge.
+          rest="${line#VERDICT:}"
+          # Word splitting is what takes the token off the front here.
+          # shellcheck disable=SC2086
+          set -- $rest
+          verdict_token="${1:-}"
+          case "$verdict_token" in
+            APPROVE)
+              echo "blocked=false" >> "$GITHUB_OUTPUT"
+              ;;
+            # NEEDS-HUMAN is the section 1.8 escalation for a review that
+            # cannot determine safety. Passing it green merges the change the
+            # review declined to clear, so it gates as BLOCK does.
+            BLOCK|NEEDS-HUMAN)
+              if [ "$FAIL_ON_BLOCK" = "true" ]; then
+                echo "blocked=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "blocked=false" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
+            *)
+              # Section 6 admits no other token. Treat one as malformed
+              # output rather than as a verdict, the same way a missing
+              # VERDICT: line already fails. fail_on_block governs which
+              # verdicts block, not whether a non-verdict counts as a pass.
+              echo "Unrecognized verdict token '$verdict_token'." \
+                "Section 6 allows APPROVE, BLOCK, or NEEDS-HUMAN." >&2
+              exit 1
+              ;;
+          esac
 
       - name: Post PR comment
         if: ${{ inputs.pr_comment }}
@@ -141,7 +181,7 @@ jobs:
               body,
             });
 
-      - name: Fail on BLOCK
+      - name: Fail on a blocking verdict
         if: ${{ steps.verdict.outputs.blocked == 'true' }}
         env:
           VERDICT_LINE: ${{ steps.verdict.outputs.line }}
