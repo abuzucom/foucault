@@ -118,7 +118,22 @@ def verdict_matches(expected_verdict: str, response_text: str, *,
     if required and match.group(1) != required:
         return False, (f"{mode} mode requires a {required}: line, "
                        f"got '{actual_line}'")
-    if expected_verdict in actual_line:
+    # Compare against the verdict alone. Searching the whole line lets the
+    # reason decide the grade, so an expected BLOCK matched
+    # 'VERDICT: APPROVE - no BLOCK conditions observed' and scored a failing
+    # case as a pass. Section 6 separates the reason with ' - '.
+    severity = match.group(2).split(" - ", 1)[0].strip()
+    # Fixtures store the verdict in four shapes: a bare severity ('BLOCK'),
+    # the prefixed form ('RISK: MEDIUM'), the prefix alone
+    # ('RISK (partial)'), and the prefix with its colon ('RISK:'), which
+    # asserts the mode answered without pinning a severity.
+    accepted = {
+        severity,
+        f"{match.group(1)}: {severity}",
+        match.group(1),
+        f"{match.group(1)}:",
+    }
+    if expected_verdict in accepted:
         return True, actual_line
     return False, actual_line
 
