@@ -114,14 +114,48 @@ class VerdictGateTest(unittest.TestCase):
         self.assertIn("tail -1", self.step)
         self.assertNotIn("head -1", self.step)
 
+    def _executable_lines(self) -> list:
+        """Return the step's lines that run, excluding comments."""
+        return [
+            line for line in self.step.splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+
     def test_gate_blocks_on_needs_human(self):
         """An escalation is not a pass.
 
         AUDIT.md section 1.8 escalates to NEEDS-HUMAN where the review
         cannot determine safety. Treating that as unblocked merges the exact
         change the review declined to clear.
+
+        Read the executable lines rather than the whole step. The comment
+        above the case statement names NEEDS-HUMAN, so an assertion over the
+        step text stays green after a revert to a BLOCK-only gate.
         """
-        self.assertIn("NEEDS-HUMAN", self.step)
+        executable = self._executable_lines()
+        self.assertTrue(any("NEEDS-HUMAN" in line for line in executable))
+
+    def test_gate_reads_the_verdict_token_alone(self):
+        """The reason must not decide the gate.
+
+        Searching the whole line fails closed on
+        'VERDICT: APPROVE - resolved earlier BLOCK findings' and fails open
+        on 'VERDICT: REJECT', which matches no alternative and merges.
+        """
+        executable = "\n".join(self._executable_lines())
+        self.assertIn("case ", executable)
+        self.assertIn("APPROVE)", executable)
+        self.assertNotIn("grep -qE 'BLOCK|NEEDS-HUMAN'", executable)
+
+    def test_unrecognized_token_fails_the_step(self):
+        """A malformed verdict is not a verdict.
+
+        fail_on_block governs which verdicts block, not whether output
+        carrying no valid verdict counts as a pass.
+        """
+        executable = "\n".join(self._executable_lines())
+        self.assertIn("Unrecognized verdict token", executable)
+        self.assertIn("exit 1", executable)
 
     def test_gate_reads_the_pr_mode_token_alone(self):
         """The workflow always runs PR mode, so only VERDICT: gates it.
