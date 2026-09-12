@@ -1,0 +1,140 @@
+#!/usr/bin/env python3
+"""Workflow integrity tests.
+
+Text-level assertions on .github/workflows/ci.yml and security-review.yml. No
+YAML parser is available. Each assertion targets one regression the prose
+rules call out: unpinned actions, inherited secrets, missing scripts, direct
+interpolation of pull request content into shell commands, and a merge gate
+that reads the wrong verdict.
+"""
+import re
+import unittest
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+CI_PATH = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+REVIEW_PATH = REPO_ROOT / ".github" / "workflows" / "security-review.yml"
+SHA_PIN_RE = re.compile(r"@[0-9a-f]{40}\b")
+SCRIPT_REF_RE = re.compile(r"scripts/\w+\.py")
+USES_LINE_RE = re.compile(r"^\s+uses:")
+SECRETS_INHERIT_RE = re.compile(r"^\s+secrets:\s*inherit\b")
+
+PR_INTERPOLATION_PATTERNS = (
+    "${{ github.event.pull_request.title }}",
+    "${{ github.event.pull_request.body }}",
+)
+
+
+class UsesPinningTest(unittest.TestCase):
+    """Every action reference is pinned to a full commit SHA."""
+
+    def test_every_uses_line_is_sha_pinned(self):
+        for path in (CI_PATH, REVIEW_PATH):
+            text = path.read_text(encoding="utf-8")
+            uses_lines = [
+                line for line in text.splitlines() if USES_LINE_RE.match(line)
+            ]
+            self.assertTrue(uses_lines)
+            for line in uses_lines:
+                with self.subTest(file=path.name, line=line.strip()):
+                    self.assertRegex(line, SHA_PIN_RE)
+
+
+class SecretsTest(unittest.TestCase):
+    """The reusable workflow must not receive every caller secret."""
+
+    def test_no_secrets_inherit(self):
+        for path in (CI_PATH, REVIEW_PATH):
+            text = path.read_text(encoding="utf-8")
+            for line in text.splitlines():
+                with self.subTest(file=path.name, line=line.strip()):
+                    self.assertIsNone(SECRETS_INHERIT_RE.match(line))
+
+
+class ScriptReferenceTest(unittest.TestCase):
+    """Scripts ci.yml names exist on disk."""
+
+    def test_referenced_scripts_exist(self):
+        text = CI_PATH.read_text(encoding="utf-8")
+        references = set(SCRIPT_REF_RE.findall(text))
+        self.assertTrue(references)
+        for reference in references:
+            with self.subTest(script=reference):
+                self.assertTrue((REPO_ROOT / reference).is_file())
+
+    def test_ci_references_run_eval(self):
+        text = CI_PATH.read_text(encoding="utf-8")
+        self.assertIn("eval/run_eval.py", text)
+
+
+class InterpolationSafetyTest(unittest.TestCase):
+    """Pull request title and body reach shell through env vars only.
+
+    Direct interpolation of pull request content into a run block executes
+    attacker-controlled text as shell. The workflows assign it to an env
+    var and the run block reads the var.
+    """
+
+    def _run_blocks(self, text: str) -> list:
+        blocks = []
+        for match in re.finditer(r"run: \|(.*?)(?=\n      - |\Z)", text, re.DOTALL):
+            blocks.append(match.group(1))
+        return blocks
+
+    def test_pr_fields_not_interpolated_in_shell(self):
+        for path in (CI_PATH, REVIEW_PATH):
+            text = path.read_text(encoding="utf-8")
+            for block in self._run_blocks(text):
+                for pattern in PR_INTERPOLATION_PATTERNS:
+                    with self.subTest(file=path.name, pattern=pattern):
+                        self.assertNotIn(pattern, block)
+
+
+class VerdictGateTest(unittest.TestCase):
+    """The merge gate reads the report's own verdict and holds on doubt."""
+
+    def setUp(self):
+        self.review = REVIEW_PATH.read_text(encoding="utf-8")
+        step = self.review.split("name: Parse verdict", 1)[1]
+        self.step = step.split("name: Post PR comment", 1)[0]
+
+    def _grep_lines(self) -> list:
+        return [
+            line for line in self.step.splitlines()
+            if "grep" in line and not line.lstrip().startswith("#")
+        ]
+
+    def test_gate_reads_the_last_verdict_line(self):
+        """A quoted verdict earlier in the report must not win.
+
+        A report quotes the diff under review. Reading the first match lets
+        a planted VERDICT: APPROVE line in a pull request body decide the
+        gate. Section 6 puts the authoritative verdict last.
+        """
+        self.assertIn("tail -1", self.step)
+        self.assertNotIn("head -1", self.step)
+
+    def test_gate_blocks_on_needs_human(self):
+        """An escalation is not a pass.
+
+        AUDIT.md section 1.8 escalates to NEEDS-HUMAN where the review
+        cannot determine safety. Treating that as unblocked merges the exact
+        change the review declined to clear.
+        """
+        self.assertIn("NEEDS-HUMAN", self.step)
+
+    def test_gate_reads_the_pr_mode_token_alone(self):
+        """The workflow always runs PR mode, so only VERDICT: gates it.
+
+        Accepting a RISK: line lets a report answering in another mode
+        satisfy a merge gate that mode never addressed. File and Wholesale
+        modes make no merge claim at all.
+        """
+        verdict_greps = [line for line in self._grep_lines() if "VERDICT" in line]
+        self.assertEqual(len(verdict_greps), 1)
+        self.assertIn("'^VERDICT:'", verdict_greps[0])
+        self.assertNotIn("RISK", verdict_greps[0])
+
+
+if __name__ == "__main__":
+    unittest.main()
