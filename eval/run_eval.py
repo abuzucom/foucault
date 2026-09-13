@@ -90,6 +90,8 @@ def build_review_envelope(case: dict, system_prompt: str) -> dict:
     """Build separately labeled, read-only model inputs."""
     target = case["context"] + "\n\n" + case["case_text"]
     hook_context = case.get("hook_context", "")
+    if case["expected"].get("omit_provenance"):
+        return {"mode": case["mode"], "text": target}
     return {
         "mode": case["mode"],
         "TRUSTED_HOOK_CONTEXT": {
