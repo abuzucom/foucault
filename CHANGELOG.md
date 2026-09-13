@@ -8,6 +8,9 @@ into a deployment.
 
 ### Added
 
+- Provenance-separated evaluator input with pinned policy hashing. Hook context
+  is read-only and cannot support review findings.
+
 - Twenty rules and a workflow step across `AUDIT.md`, closing gaps found by
   assessing fifteen review checklists against it. Injection gains XXE, template
   injection, open redirect, second-order injection, upload content validation
