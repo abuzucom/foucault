@@ -22,6 +22,7 @@ requires it, the VERDICT_JSON companion block).
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib
 import json
 import re
@@ -55,6 +56,37 @@ class CaseError(Exception):
     pass
 
 
+def normalize_text(text: str) -> bytes:
+    """Return the canonical bytes used for provenance hashes."""
+    return text.replace("\r\n", "\n").encode("utf-8")
+
+
+def sha256_text(text: str) -> str:
+    """Return the SHA-256 digest of canonical text bytes."""
+    return hashlib.sha256(normalize_text(text)).hexdigest()
+
+
+def build_review_envelope(case: dict, system_prompt: str) -> dict:
+    """Build separately labeled, read-only model inputs."""
+    target = case["context"] + "\n\n" + case["case_text"]
+    hook_context = case.get("hook_context", "")
+    if case["expected"].get("omit_provenance"):
+        return {"mode": case["mode"], "text": target}
+    return {
+        "mode": case["mode"],
+        "TRUSTED_HOOK_CONTEXT": {
+            "read_only": True,
+            "sha256": sha256_text(hook_context),
+            "text": hook_context,
+        },
+        "REVIEW_TARGET": {
+            "sha256": sha256_text(target),
+            "text": target,
+        },
+        "policy_sha256": sha256_text(system_prompt),
+    }
+
+
 def load_case(case_dir: Path) -> dict:
     expected_path = case_dir / "expected.json"
     if not expected_path.is_file():
@@ -77,6 +109,8 @@ def load_case(case_dir: Path) -> dict:
 
     context_path = case_dir / "context.md"
     context_text = context_path.read_text(encoding="utf-8") if context_path.is_file() else ""
+    hook_path = case_dir / "hook_context.md"
+    hook_context = hook_path.read_text(encoding="utf-8") if hook_path.is_file() else ""
 
     case_text = "\n\n".join(p.read_text(encoding="utf-8") for p in input_files)
     return {
@@ -85,6 +119,7 @@ def load_case(case_dir: Path) -> dict:
         "expected": expected,
         "context": context_text,
         "case_text": case_text,
+        "hook_context": hook_context,
     }
 
 
@@ -177,7 +212,6 @@ def main() -> int:
         print(f"AUDIT.md not found at {AUDIT_PATH}", file=sys.stderr)
         return 1
     system_prompt = AUDIT_PATH.read_text(encoding="utf-8")
-
     try:
         cases = discover_cases(args.case)
     except CaseError as exc:
@@ -194,7 +228,12 @@ def main() -> int:
 
     failures = 0
     for case in cases:
-        response = model_call(system_prompt, case["mode"], case["context"] + "\n\n" + case["case_text"])
+        envelope = build_review_envelope(case, system_prompt)
+        response = model_call(
+            system_prompt,
+            case["mode"],
+            json.dumps(envelope, ensure_ascii=True, sort_keys=True),
+        )
         ok, detail = verdict_matches(case["expected"]["expected_verdict"], response,
                                      mode=case["mode"])
         status = "pass" if ok else "FAIL"

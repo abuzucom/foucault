@@ -1,0 +1,7 @@
+diff --git a/app/review.py b/app/review.py
+new file mode 100644
+--- /dev/null
++++ b/app/review.py
+@@ -0,0 +1,4 @@
++def review(target):
++    return target

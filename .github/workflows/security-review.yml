@@ -69,7 +69,7 @@ jobs:
           path: .foucault
           persist-credentials: false
 
-      - name: Build case text
+      - name: Build provenance-labeled case text
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
@@ -77,14 +77,38 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          {
-            echo "Title: $PR_TITLE"
-            echo
-            echo "$PR_BODY"
-            echo
-            echo "---"
-            git diff "$BASE_SHA" "$HEAD_SHA"
-          } > case_text.txt
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import subprocess
+
+          def digest(text):
+              return hashlib.sha256(text.replace("\r\n", "\n").encode()).hexdigest()
+
+          diff = subprocess.run(
+              ["git", "diff", os.environ["BASE_SHA"], os.environ["HEAD_SHA"]],
+              check=True,
+              capture_output=True,
+              text=True,
+          ).stdout
+          target = "Title: " + os.environ["PR_TITLE"] + "\n\n"
+          target += os.environ.get("PR_BODY", "") + "\n\n---\n" + diff
+          envelope = {
+              "mode": "PR",
+              "TRUSTED_HOOK_CONTEXT": {
+                  "read_only": True,
+                  "sha256": digest(""),
+                  "text": "",
+              },
+              "REVIEW_TARGET": {
+                  "sha256": digest(target),
+                  "text": target,
+              },
+          }
+          with open("case_text.txt", "w", encoding="utf-8", newline="\n") as output:
+              json.dump(envelope, output, ensure_ascii=True, sort_keys=True)
+          PY
 
       - name: Run model call
         id: model
