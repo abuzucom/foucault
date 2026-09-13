@@ -4,12 +4,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows SemVer. Pin a tag or commit SHA when loading `AUDIT.md`
 into a deployment.
 
-## [Unreleased]
+## [2.0.0]: provenance-separated review inputs
 
 ### Added
 
 - Provenance-separated evaluator input with pinned policy hashing. Hook context
   is read-only and cannot support review findings.
+- Local evaluation no longer trusts a self-referential in-repository policy
+  hash. Production policy integrity remains anchored by the immutable workflow
+  revision.
 
 - Twenty rules and a workflow step across `AUDIT.md`, closing gaps found by
   assessing fifteen review checklists against it. Injection gains XXE, template
