@@ -110,6 +110,23 @@ jobs:
               json.dump(envelope, output, ensure_ascii=True, sort_keys=True)
           PY
 
+      - name: Verify pinned audit policy
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          policy = Path(".foucault/AUDIT.md")
+          manifest = Path(".foucault/eval/trusted_policy_hashes.json")
+          text = policy.read_text(encoding="utf-8").replace("\r\n", "\n")
+          digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+          expected = json.loads(manifest.read_text(encoding="utf-8"))["policies"]["AUDIT.md"]["sha256"]
+          if digest != expected:
+              raise SystemExit("AUDIT.md does not match its pinned trusted hash")
+          PY
+
       - name: Run model call
         id: model
         env:
