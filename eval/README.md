@@ -32,8 +32,9 @@ repository does not prescribe one.
 Model adapters receive a JSON review envelope as `case_text`. The envelope
 separates `TRUSTED_HOOK_CONTEXT` from `REVIEW_TARGET`. Hook context is marked
 read-only and cannot support a finding. Each channel has a SHA-256 digest over
-normalized UTF-8 text. `eval/trusted_policy_hashes.json` pins the trusted
-`AUDIT.md` digest. A mismatch fails closed before model evaluation.
+UTF-8 text. Production deployments must pin `AUDIT.md` outside the reviewed
+checkout. Local structure checks do not compare a policy file with a hash
+stored beside that same file.
 
 `--model-call` resolves to an importable module and executes its code. Treat
 it as a trusted input. Supply it only from a local invocation or a CI

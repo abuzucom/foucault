@@ -31,7 +31,6 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 AUDIT_PATH = REPO_ROOT / "AUDIT.md"
-TRUSTED_POLICY_MANIFEST = Path(__file__).resolve().parent / "trusted_policy_hashes.json"
 CASES_DIR = Path(__file__).resolve().parent / "cases"
 
 VALID_MODES = {"PR", "File", "Piece", "Wholesale"}
@@ -65,25 +64,6 @@ def normalize_text(text: str) -> bytes:
 def sha256_text(text: str) -> str:
     """Return the SHA-256 digest of canonical text bytes."""
     return hashlib.sha256(normalize_text(text)).hexdigest()
-
-
-def load_trusted_policy_hash() -> str:
-    """Return the pinned digest for the evaluator policy."""
-    try:
-        manifest = json.loads(TRUSTED_POLICY_MANIFEST.read_text(encoding="utf-8"))
-        entry = manifest["policies"]["AUDIT.md"]
-        digest = entry["sha256"]
-    except (OSError, UnicodeError, json.JSONDecodeError, KeyError, TypeError):
-        raise CaseError("trusted policy hash manifest is invalid")
-    if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
-        raise CaseError("trusted policy hash is malformed")
-    return digest
-
-
-def verify_trusted_policy(system_prompt: str) -> None:
-    """Fail closed unless AUDIT.md matches its pinned trusted digest."""
-    if sha256_text(system_prompt) != load_trusted_policy_hash():
-        raise CaseError("AUDIT.md does not match its pinned trusted hash")
 
 
 def build_review_envelope(case: dict, system_prompt: str) -> dict:
@@ -232,12 +212,6 @@ def main() -> int:
         print(f"AUDIT.md not found at {AUDIT_PATH}", file=sys.stderr)
         return 1
     system_prompt = AUDIT_PATH.read_text(encoding="utf-8")
-    try:
-        verify_trusted_policy(system_prompt)
-    except CaseError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 1
-
     try:
         cases = discover_cases(args.case)
     except CaseError as exc:
