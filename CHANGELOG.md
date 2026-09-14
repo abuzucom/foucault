@@ -1,10 +1,29 @@
 # Changelog
 
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-Versioning follows SemVer. Pin a tag or commit SHA when loading `AUDIT.md`
-into a deployment.
+This file documents every notable project change.
 
-## [2.0.1]: hardening false-positive calibration
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+This project follows Semantic Versioning. Pin a tag or commit SHA when
+loading `AUDIT.md` into a deployment.
+
+## [3.0.0] (2026-09-14)
+
+### Changed
+
+- Re-adopted the `abuzucom/agents` 2.0 contract at immutable commit
+  `7de83d04224784774dcfd1a21462bf23315bdeae`.
+- Added complete cross-platform command, infrastructure, consent, lifecycle,
+  GitHub, branch, and identity enforcement.
+- Added synchronized policy copies for supported agent clients.
+- Added immutable compliance, attribution, coverage, drift, and checker
+  validation to CI.
+
+### Breaking
+
+- Agent workflows now require the complete policy and gate registration set.
+- Missing client hooks, shared modules, or policy copies fail adoption checks.
+
+## [2.0.1] (2026-09-14)
 
 ### Fixed
 
@@ -17,7 +36,7 @@ into a deployment.
 - `eval/cases/agent-hardening-calibration-pr` regression coverage for command
   policy tightening and matching test expectation updates.
 
-## [2.0.0]: provenance-separated review inputs
+## [2.0.0] (2026-09-13)
 
 ### Fixed
 
@@ -86,7 +105,7 @@ into a deployment.
   incoming checklists: assess against what `AUDIT.md` already says, extend by
   default, and add a rule only for a distinct sink, scenario or fix.
 
-## [1.0.0]: first tagged release
+## [1.0.0] (2026-09-01)
 
 ### Changed (breaking)
 
@@ -121,7 +140,7 @@ into a deployment.
 - An "Organization Policy Suite" section in `README.md` documenting the
   relationship between foucault and `abuzucom/agents`.
 
-## [Unreleased before 1.0.0]
+## Historical pre-1.0.0
 
 - `SECURITY.md` (now `AUDIT.md`). Four review modes, 15 failure-mode
   classes, an 8-step workflow, hard blockers, and false-positive rules.

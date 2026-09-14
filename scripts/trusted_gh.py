@@ -1,36 +1,37 @@
 #!/usr/bin/env python3
-"""Resolve GitHub CLI outside the repository and run safe commands."""
+"""Resolve GitHub CLI outside the repository and return bounded account data."""
 import json
 import os
 import re
 import subprocess
 import sys
 import tempfile
+import urllib.parse
 from pathlib import Path
 
 
 ACCOUNT_OUTPUT_LIMIT = 256
 COMMAND_OUTPUT_LIMIT = 1024 * 1024
 GH_TIMEOUT_SECONDS = 5
+PROXY_VARIABLES = ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY",
+                   "http_proxy", "https_proxy", "all_proxy")
+MANAGED_PROXY_HOST = "127.0.0.1"
+MANAGED_PROXY_PORT = 9
 LOGIN = re.compile(r"\A[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\Z")
 TEXT_OPTIONS = frozenset(("--body", "--title"))
-PROXY_VARIABLES = frozenset((
-    "ALL_PROXY", "HTTP_PROXY", "HTTPS_PROXY",
-    "all_proxy", "http_proxy", "https_proxy",
-))
-MANAGED_PROXY = "127.0.0.1:9"
 
 
 def find_literal_escape_sequences(arguments: list[str]) -> list[str]:
-    """Return text options containing escape text instead of newlines."""
+    """Return prose options containing escape text instead of real newlines."""
     findings = []
     for index, argument in enumerate(arguments):
         if argument in TEXT_OPTIONS:
             if index + 1 < len(arguments) and "\\n" in arguments[index + 1]:
                 findings.append(argument)
-        elif any(argument.startswith(f"{option}=") for option in TEXT_OPTIONS):
-            if "\\n" in argument.split("=", 1)[1]:
-                findings.append(argument.split("=", 1)[0])
+            continue
+        for option in TEXT_OPTIONS:
+            if argument.startswith(f"{option}=") and "\\n" in argument:
+                findings.append(option)
     return findings
 
 
@@ -54,13 +55,14 @@ def _candidate_names() -> tuple[str, ...]:
 def resolve_gh(repo_root) -> str:
     """Return an absolute GitHub CLI executable outside the repository."""
     repository = Path(repo_root).resolve()
+    names = _candidate_names()
     for raw_directory in os.environ.get("PATH", "").split(os.pathsep):
         if not raw_directory:
             continue
         directory = Path(raw_directory.strip('"'))
         if not directory.is_absolute():
             continue
-        for name in _candidate_names():
+        for name in names:
             candidate = directory / name
             if _is_inside(Path(os.path.abspath(candidate)), repository):
                 continue
@@ -90,40 +92,12 @@ def _safe_directory(repository: Path, executable: Path) -> Path:
     raise OSError("no safe external directory is available for GitHub CLI")
 
 
-def _is_managed_proxy(value: str) -> bool:
-    """Return whether a proxy value is the managed sandbox placeholder."""
-    normalized = value.strip().lower().rstrip("/")
-    return normalized in {
-        MANAGED_PROXY,
-        f"http://{MANAGED_PROXY}",
-        f"https://{MANAGED_PROXY}",
-    }
-
-
-def _safe_environment(repository: Path) -> dict:
-    """Return an environment without repository-controlled execution paths."""
-    environment = dict(os.environ)
-    environment.pop("GH_CONFIG_DIR", None)
-    environment.pop("GH_REPO", None)
-    for name in PROXY_VARIABLES:
-        value = environment.get(name)
-        if value and _is_managed_proxy(value):
-            environment.pop(name, None)
-    environment.update({"GH_PAGER": "", "GH_PROMPT_DISABLED": "1"})
-    environment["PATH"] = _safe_search_path(repository)
-    if os.name == "nt":
-        environment["NoDefaultCurrentDirectoryInExePath"] = "1"
-    return environment
-
-
 def _safe_search_path(repository: Path) -> str:
     """Return PATH without relative or repository-controlled entries."""
     entries = []
     for raw_directory in os.environ.get("PATH", "").split(os.pathsep):
-        if not raw_directory:
-            continue
-        directory = Path(raw_directory.strip('"'))
-        if not directory.is_absolute():
+        directory = Path(raw_directory.strip('"')) if raw_directory else Path()
+        if not raw_directory or not directory.is_absolute():
             continue
         try:
             resolved = directory.resolve(strict=False)
@@ -134,15 +108,49 @@ def _safe_search_path(repository: Path) -> str:
     return os.pathsep.join(entries)
 
 
+def _is_managed_proxy_placeholder(value: str) -> bool:
+    """Return whether a proxy value is the managed Codex placeholder."""
+    candidate = value.strip()
+    try:
+        parsed = urllib.parse.urlsplit(candidate if "://" in candidate
+                                       else "//" + candidate)
+        port = parsed.port
+    except ValueError:
+        return False
+    return parsed.hostname == MANAGED_PROXY_HOST and port == MANAGED_PROXY_PORT
+
+
+def _sanitize_proxy_environment(environment: dict) -> None:
+    """Remove only managed proxy placeholders from an environment."""
+    for variable in PROXY_VARIABLES:
+        value = environment.get(variable)
+        if value and _is_managed_proxy_placeholder(value):
+            environment.pop(variable, None)
+
+
+def _safe_environment(repository: Path) -> dict:
+    """Return an environment without repository-controlled execution paths."""
+    environment = dict(os.environ)
+    environment.pop("GH_CONFIG_DIR", None)
+    environment.pop("GH_REPO", None)
+    _sanitize_proxy_environment(environment)
+    environment.update({"GH_PAGER": "", "GH_PROMPT_DISABLED": "1"})
+    environment["PATH"] = _safe_search_path(repository)
+    if os.name == "nt":
+        environment["NoDefaultCurrentDirectoryInExePath"] = "1"
+    return environment
+
+
 def run_gh(repo_root, arguments: list[str], *, runner=None, timeout=None):
     """Run trusted GitHub CLI from outside the repository."""
     repository = Path(repo_root).resolve()
     executable = Path(resolve_gh(repository))
+    environment = _safe_environment(repository)
     execute = runner or subprocess.run
     return execute(
         [str(executable), *arguments],
         cwd=_safe_directory(repository, executable),
-        env=_safe_environment(repository),
+        env=environment,
         capture_output=True,
         text=True,
         check=False,
@@ -184,7 +192,7 @@ def _is_token_output(arguments: list[str]) -> bool:
         if normalized[index:index + 2] != ["auth", "status"]:
             continue
         for token in normalized[index + 2:]:
-            long_flag = token == "--show-token" or token == "--show-token=true"
+            long_flag = token in ("--show-token", "--show-token=true")
             short_flag = token == "-t" or (
                 token.startswith("-") and not token.startswith("--")
                 and "t" in token.split("=", 1)[0][1:])
@@ -243,24 +251,20 @@ def _run_requested_command(repo_root, arguments: list[str]) -> int:
         return 2
     decision, reason = gate_core.forge_verdict("gh", arguments)
     if decision == "deny":
-        if "removes work" in reason:
-            print("error: GitHub safety policy: removes work", file=sys.stderr)
-        else:
-            print("error: GitHub safety policy denied this command", file=sys.stderr)
+        print(f"error: GitHub safety policy: {reason}", file=sys.stderr)
         return 2
     try:
         authenticated_account(repo_root)
         result = run_gh(repo_root, arguments)
     except (OSError, subprocess.TimeoutExpired, ValueError) as error:
-        print(f"error: {_classify_failure(_safe_error(error))}: {_safe_error(error)}",
-              file=sys.stderr)
+        safe_error = _safe_error(error)
+        print(f"error: {_classify_failure(safe_error)}: {safe_error}", file=sys.stderr)
         return 1
     sys.stdout.write(result.stdout[:COMMAND_OUTPUT_LIMIT])
     safe_stderr = _safe_error(result.stderr[:COMMAND_OUTPUT_LIMIT])
     sys.stderr.write(safe_stderr)
     if result.returncode != 0:
-        category = _classify_failure(safe_stderr)
-        print(f"error: {category}", file=sys.stderr)
+        print(f"error: {_classify_failure(safe_stderr)}", file=sys.stderr)
     return result.returncode
 
 

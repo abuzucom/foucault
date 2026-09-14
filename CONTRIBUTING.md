@@ -26,16 +26,22 @@ Keep `AUDIT.md` terse and imperative. Do not add a rule without a stated
 exploit scenario. Keep the document under its 32768-character ceiling.
 Split reference material out before exceeding it.
 
-## No build step
+## Validation
 
-This repository has no application code and no build. Everything runs with
-the standard library:
+This repository has no application build. Install the pinned checker
+dependency before running validation:
 
 ```console
+python -m pip install --requirement requirements-checkers.txt
 python eval/run_eval.py
-python scripts/check_hedging.py AGENTS.md README.md
-python -m unittest discover -s tests -v
+python scripts/sync.py --check
+python scripts/sync.py --check-shared
+python scripts/check_gate_adoption.py
+python scripts/run_tests.py
 ```
+
+Run the complete policy, workflow, security, and hook checks before opening a
+pull request. Do not claim live-model coverage without a configured adapter.
 
 ## Pull requests
 

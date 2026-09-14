@@ -15,8 +15,12 @@ review workflow to miss a class of vulnerability it claims to cover, or
 that lets reviewed content override the reviewer's instructions (prompt
 injection), counts as a security issue in this project, not a quality bug.
 
-Scope includes the repository's automation: `eval/`, `scripts/`,
-`hooks/`, `.github/workflows/security-review.yml`, and the tests for each.
+Scope includes the repository's automation: `eval/`, `scripts/`, `hooks/`,
+client hook configurations, `.github/workflows/`, and the tests for each.
+
+Scope includes policy distribution and enforcement. A defect that bypasses a
+registered gate, accepts an unsafe client payload, or validates mutable policy
+instead of the trusted revision counts as a security issue.
 
 Scope excludes a vulnerability in code that `AUDIT.md` reviews. Report that
 to the reviewed project instead.

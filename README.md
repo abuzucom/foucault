@@ -79,9 +79,9 @@ philosophy (defend against AI-assisted, "vibe" coding failure modes) and
 split the work by when it runs:
 
 - **agents** guards work in progress and future progress. It is proactive
-  and hook-enforced: a canonical `AGENTS.md`, synced copies for eight
-  coding-agent tools, and Claude Code hooks that block a violation live, as
-  it happens, before a commit or a tool call completes.
+  and hook-enforced: a canonical `AGENTS.md`, synchronized copies for eight
+  coding-agent tools, client lifecycle reinjection, and complete command and
+  file gates across Claude, Codex, Gemini, and Antigravity.
 - **foucault** reviews a pull request or a piece of work on demand. It is
   reactive and manually or CI invoked: a system prompt for an audit agent,
   run against a diff, a file, a fragment, or a whole tree, after the code
@@ -94,11 +94,18 @@ from writing the defect. `AUDIT.md` sections 2.5, 2.7, and 2.3 try to catch
 it if that defect ships anyway. Each repository maintains its own document
 independently. Exact wording can drift as a result. The different trigger
 model makes drift an expected outcome, not a bug. This repository's
-own [`AGENTS.md`](AGENTS.md) is a bespoke subset of the `abuzucom/agents`
-template, not a copy of it. `docs/template-drift.md` records the kept and
-dropped rules, the reason for each, and drift against the pinned upstream
-commit.
+own [`AGENTS.md`](AGENTS.md) preserves Foucault-specific audit safeguards
+alongside the adopted upstream contract. `docs/template-drift.md` records
+the adaptations, omissions, and drift against the pinned upstream commit.
+
+The adoption uses `scripts/sync.py` for policy copies and
+`shared-files.json` for cross-repository gate integrity. CI checks policy
+size, synchronization, gate completeness, launcher startup, hook coverage,
+workflow safety, attribution, and immutable compliance.
 
 ## Contributing
+
+Every repository action requires an active-user request. Do not run Git commands before consent.
+Use `scripts/read_git_state.py` for state checks.
 
 See [`AGENTS.md`](AGENTS.md) for the rules governing changes to this repository, including the requirement that any change to `AUDIT.md` affecting a verdict, blocker, or severity mapping ships with an `eval/` case demonstrating it.
