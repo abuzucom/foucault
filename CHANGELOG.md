@@ -6,6 +6,14 @@ into a deployment.
 
 ## [Unreleased]
 
+### Fixed
+
+- Added trusted GitHub CLI routing with bounded account checks, repository-safe
+  executable lookup, managed-proxy handling, token-output denial, and
+  delivery-safe diagnostics.
+- Added delivery evidence rules that distinguish unverified state from failed
+  operations and require remote read-back before completion claims.
+
 ### Added
 
 - Twenty rules and a workflow step across `AUDIT.md`, closing gaps found by

@@ -7,7 +7,8 @@ adopting repository records local differences and reasons).
 
 Pinned commit: `a7a066181a9995a26f5afcec95b0541ce99e9bab`
 (`abuzucom/agents`, dated 2026-08-31). `upstream-files.json` records a
-per-file hash of every file copied from this commit.
+per-file hash of every copied file. Locally adapted files use the separate
+`local_adapted_files` section.
 
 ## Expected to differ
 
@@ -15,7 +16,8 @@ per-file hash of every file copied from this commit.
   generic template. It keeps the non-negotiable core (parameterization,
   destructive-command authorization, test integrity, scope, draft PRs,
   API compatibility, hashing, secrets, dependency authorization, git
-  identity), branch naming, git identity, and the full Style section
+  identity), branch naming, git identity, hosted GitHub operations,
+  delivery evidence, and the full Style section
   (impersonal voice, terse sentences, no em dash, ASCII-only, American
   spelling, English-only, commit format). It drops container/runtime-root
   rules, dependency-lockfile rules beyond the eval harness's own minimal
@@ -32,6 +34,9 @@ per-file hash of every file copied from this commit.
   `immutable-conflict-check.yml`, or `agents-md-compliance.yml`. This
   repository's own CI (once wired) runs the copied checkers and the eval
   harness directly rather than reusing agents' compliance workflows.
+- `scripts/trusted_gh.py` is locally adapted from the adopted trusted-tool
+  implementation. Its tests cover repository-safe lookup, proxy handling,
+  token output, and delivery-safe diagnostics.
 - `tests/test_enforce_branch_name.py` trims its `HOOK_MATCHERS` dict
   from agents' full five-hook matrix (`enforce_branch_name.py`,
   `enforce_git_identity.py`, `block_destructive_bash.py`,
