@@ -21,6 +21,6 @@
     "tests/test_trusted_git_state.py": "9c22889d12f6b3c890cc6889d5b87eb1ab6a719453bf3c2ef0b9a15d3d4fd75e"
   },
   "local_adapted_files": {
-    "scripts/trusted_gh.py": "3dfc0d440c065ec39e7379a981f08a052833659a5b7195c7dbf6040b491dc606"
+    "scripts/trusted_gh.py": "14b98619dceafd8584bb3adcbc21666ecef0ea75288793023527a04a10aebdf2"
   }
 }

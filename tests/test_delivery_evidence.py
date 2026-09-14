@@ -37,15 +37,20 @@ class DeliveryEvidenceTest(unittest.TestCase):
 
     def test_feature_branch_claim_stays_unverified_on_main_checkout(self):
         evidence = make_evidence()
+        evidence["remote_ref_verified"] = True
         errors = delivery_evidence.claim_errors(evidence, "push")
-        self.assertIn("remote ref has not been read back", errors)
+        self.assertIn("current branch does not match remote ref", errors)
         self.assertEqual(
             delivery_evidence.verification_status(evidence, "push"),
             "unverified",
         )
 
     def test_pull_request_claim_requires_readback(self):
-        evidence = make_evidence(pr_number=46, is_draft=True)
+        evidence = make_evidence(
+            current_branch="fix/security-enforcement-drift",
+            pr_number=46,
+            is_draft=True,
+        )
         errors = delivery_evidence.claim_errors(evidence, "pull_request")
         self.assertIn("remote ref has not been read back", errors)
         self.assertIn("pull request has not been read back", errors)
@@ -60,12 +65,14 @@ class DeliveryEvidenceTest(unittest.TestCase):
 
     def test_verified_draft_pull_request_requires_all_readbacks(self):
         evidence = make_evidence(
+            current_branch="main",
             pr_number=46,
             is_draft=True,
             remote_ref_verified=True,
             pr_verified=True,
             draft_status_verified=True,
         )
+        evidence["current_branch"] = evidence["remote_ref"]
         self.assertEqual(
             delivery_evidence.verification_status(evidence, "pull_request"),
             "verified",

@@ -137,6 +137,56 @@ class TrustedRunnerSafetyTest(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("literal escape text", result.stderr)
 
+    def test_attached_newline_escape_in_pr_body_is_rejected(self):
+        result = subprocess.run(
+            [
+                sys.executable, str(SCRIPT), "run", "pr", "edit", "45",
+                "--body=line1\\n\\nline2",
+            ],
+            cwd=REPOSITORY_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("literal escape text", result.stderr)
+
+    def test_auth_status_short_token_flag_is_denied(self):
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "run", "auth", "status", "-t"],
+            cwd=REPOSITORY_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("token output is denied", result.stderr)
+
+    def test_auth_status_attached_token_flag_is_denied(self):
+        result = subprocess.run(
+            [
+                sys.executable, str(SCRIPT), "run", "auth", "status",
+                "--show-token=true",
+            ],
+            cwd=REPOSITORY_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("token output is denied", result.stderr)
+
+    def test_auth_status_short_flag_bundle_is_denied(self):
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "run", "auth", "status", "-at"],
+            cwd=REPOSITORY_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("token output is denied", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

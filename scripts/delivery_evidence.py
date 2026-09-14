@@ -60,6 +60,9 @@ def claim_errors(evidence: dict, claim_type: str) -> list[str]:
         return errors
     if evidence["command_result"] != "succeeded":
         errors.append("command result is not succeeded")
+    if (evidence["current_branch"] == "main"
+            or evidence["current_branch"] != evidence["remote_ref"]):
+        errors.append("current branch does not match remote ref")
     if not evidence["remote_ref_verified"]:
         errors.append("remote ref has not been read back")
     if claim_type == "pull_request":

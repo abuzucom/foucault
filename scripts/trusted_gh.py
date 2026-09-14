@@ -19,18 +19,18 @@ PROXY_VARIABLES = frozenset((
     "all_proxy", "http_proxy", "https_proxy",
 ))
 MANAGED_PROXY = "127.0.0.1:9"
-TOKEN_OUTPUT_ARGS = (
-    ("auth", "token"),
-    ("auth", "status", "--show-token"),
-)
 
 
 def find_literal_escape_sequences(arguments: list[str]) -> list[str]:
     """Return text options containing escape text instead of newlines."""
     findings = []
-    for index, argument in enumerate(arguments[:-1]):
-        if argument in TEXT_OPTIONS and "\\n" in arguments[index + 1]:
-            findings.append(argument)
+    for index, argument in enumerate(arguments):
+        if argument in TEXT_OPTIONS:
+            if index + 1 < len(arguments) and "\\n" in arguments[index + 1]:
+                findings.append(argument)
+        elif any(argument.startswith(f"{option}=") for option in TEXT_OPTIONS):
+            if "\\n" in argument.split("=", 1)[1]:
+                findings.append(argument.split("=", 1)[0])
     return findings
 
 
@@ -177,11 +177,20 @@ def authenticated_account(repo_root) -> dict:
 def _is_token_output(arguments: list[str]) -> bool:
     """Return whether the command requests an authentication token."""
     normalized = [argument.lower() for argument in arguments]
-    return any(
-        all(token in normalized for token in candidate)
-        and normalized.index(candidate[0]) < normalized.index(candidate[-1])
-        for candidate in TOKEN_OUTPUT_ARGS
-    )
+    if any(normalized[index:index + 2] == ["auth", "token"]
+           for index in range(len(normalized) - 1)):
+        return True
+    for index in range(len(normalized) - 1):
+        if normalized[index:index + 2] != ["auth", "status"]:
+            continue
+        for token in normalized[index + 2:]:
+            long_flag = token == "--show-token" or token == "--show-token=true"
+            short_flag = token == "-t" or (
+                token.startswith("-") and not token.startswith("--")
+                and "t" in token.split("=", 1)[0][1:])
+            if long_flag or short_flag:
+                return True
+    return False
 
 
 def _classify_failure(output: str) -> str:
