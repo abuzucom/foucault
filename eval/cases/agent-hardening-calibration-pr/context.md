@@ -1,0 +1,1 @@
+Ticket: tighten the agent command policy by denying operations that were previously allowed or consent-routed. Update parity tests to expect the stricter policy. The change introduces no bypass, data loss, security control failure, or required-workflow failure.

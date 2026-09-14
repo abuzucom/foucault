@@ -1,0 +1,7 @@
+{
+  "mode": "PR",
+  "expected_verdict": "APPROVE",
+  "expected_classes": [],
+  "expect_json": true,
+  "notes": "The patch narrows agent capabilities and updates matching expectations from ask to deny. No concrete security, correctness, data-loss, or required-workflow failure appears. Section 8 prohibits treating capability reduction or matching test changes as a security finding by itself."
+}

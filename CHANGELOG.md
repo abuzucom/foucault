@@ -4,6 +4,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows SemVer. Pin a tag or commit SHA when loading `AUDIT.md`
 into a deployment.
 
+## [2.0.1]: hardening false-positive calibration
+
+### Fixed
+
+- Calibrated `AUDIT.md` section 8 to avoid treating stricter agent permissions
+  and matching test expectation changes as security findings without concrete
+  harmful impact.
+
+### Added
+
+- `eval/cases/agent-hardening-calibration-pr` regression coverage for command
+  policy tightening and matching test expectation updates.
+
 ## [2.0.0]: provenance-separated review inputs
 
 ### Fixed
