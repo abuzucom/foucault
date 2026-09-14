@@ -16,6 +16,14 @@ into a deployment.
 - Added delivery evidence rules that distinguish unverified state from failed
   operations and require remote read-back before completion claims.
 
+### Fixed
+
+- Added trusted GitHub CLI routing with bounded account checks, repository-safe
+  executable lookup, managed-proxy handling, token-output denial, and
+  delivery-safe diagnostics.
+- Added delivery evidence rules that distinguish unverified state from failed
+  operations and require remote read-back before completion claims.
+
 ### Added
 
 - Provenance-separated evaluator input with pinned policy hashing. Hook context

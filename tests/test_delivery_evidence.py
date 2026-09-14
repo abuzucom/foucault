@@ -40,6 +40,8 @@ class DeliveryEvidenceTest(unittest.TestCase):
         evidence["remote_ref_verified"] = True
         errors = delivery_evidence.claim_errors(evidence, "push")
         self.assertIn("current branch does not match remote ref", errors)
+        errors = delivery_evidence.claim_errors(evidence, "push")
+        self.assertIn("remote ref has not been read back", errors)
         self.assertEqual(
             delivery_evidence.verification_status(evidence, "push"),
             "unverified",
