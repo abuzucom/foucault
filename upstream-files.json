@@ -19,5 +19,8 @@
     "scripts/trusted_git.py": "92d96209122407eb5d4d25433fe03f81b0c1d52567df2899d9ae39c03390f1e9",
     "tests/test_enforce_git_identity.py": "c24e8116eb372db84f043aaa562af11db5bfcbf41ca2d1f36f8cf87496d4465c",
     "tests/test_trusted_git_state.py": "9c22889d12f6b3c890cc6889d5b87eb1ab6a719453bf3c2ef0b9a15d3d4fd75e"
+  },
+  "local_adapted_files": {
+    "scripts/trusted_gh.py": "14b98619dceafd8584bb3adcbc21666ecef0ea75288793023527a04a10aebdf2"
   }
 }

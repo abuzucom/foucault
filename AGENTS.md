@@ -65,6 +65,18 @@ Enforced live by `hooks/enforce_git_identity.py` (`SessionStart` and
 `PreToolUse` on `Bash`) and by `scripts/check_git_identity.py` at
 `pre-commit`.
 
+## Hosted GitHub operations
+
+Run hosted GitHub operations through `scripts/trusted_gh.py`:
+`python scripts/trusted_gh.py run <gh arguments>`. The wrapper resolves the
+GitHub CLI outside the repository, authenticates through a fixed account
+request, and applies the shared forge safety gate. Direct `gh` execution is
+not an approved path.
+
+Report a hosted operation as verified only after reading its result back from
+GitHub. A missing wrapper is a policy mismatch. It is not evidence that the
+hosted operation failed.
+
 ## Style
 
 Impersonal active voice. Omit first-, second-, and third-person personal
@@ -129,6 +141,11 @@ affecting a verdict, run the affected `eval/cases/` entries (Non-negotiable
 
 Retry discipline: never run a failing command more than twice for the same
 goal. Stop after the second failure. Analyze the error. Change strategy.
+
+Delivery claims require direct evidence from the active checkout and the
+remote. Include the checkout path, current branch, commit, remote ref,
+command result, PR number, and draft status. Distinguish an unverified state
+from a failed operation.
 
 ## Scope of what this repository is
 

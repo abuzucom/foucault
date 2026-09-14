@@ -42,3 +42,8 @@ python -m unittest discover -s tests -v
 Open every pull request as a draft. Never push to `main`. State what
 changed. For an `AUDIT.md` change, name the `eval/cases/` entries that
 cover it.
+
+Run hosted GitHub commands through `scripts/trusted_gh.py`:
+`python scripts/trusted_gh.py run <gh arguments>`. Verify branch and remote
+state before reporting a push. Read the pull request back before reporting
+its number or draft status.

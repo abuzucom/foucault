@@ -55,7 +55,9 @@ def load_manifest() -> dict:
 
 def check_local(manifest: dict) -> int:
     mismatches = 0
-    for rel_path, recorded_hash in sorted(manifest["files"].items()):
+    tracked_files = dict(manifest["files"])
+    tracked_files.update(manifest.get("local_adapted_files", {}))
+    for rel_path, recorded_hash in sorted(tracked_files.items()):
         local_path = REPO_ROOT / rel_path
         if not local_path.is_file():
             print(f"MISSING  {rel_path}: file not found locally")
@@ -67,7 +69,7 @@ def check_local(manifest: dict) -> int:
             mismatches += 1
         else:
             print(f"ok       {rel_path}")
-    total = len(manifest["files"])
+    total = len(tracked_files)
     print(f"\n{total - mismatches}/{total} files match the local manifest")
     return 1 if mismatches else 0
 
