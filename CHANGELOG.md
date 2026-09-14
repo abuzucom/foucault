@@ -18,6 +18,8 @@ into a deployment.
 
 ### Fixed
 
+- Closed short-flag, attached-flag, and branch-context bypasses in delivery
+  verification.
 - Added trusted GitHub CLI routing with bounded account checks, repository-safe
   executable lookup, managed-proxy handling, token-output denial, and
   delivery-safe diagnostics.
