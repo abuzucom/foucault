@@ -119,6 +119,7 @@ rule instead (`clean-*` cases), never copied from a real system.
 | `sandbox-network-file` | File | 2.6, unrestricted egress and reachable metadata |
 | `sandbox-fallback-file` | File | 2.8/2.6, sandbox degrading to host execution |
 | `agent-env-inheritance-pr` | PR | 2.6, worker inheriting the full parent environment |
+| `agent-hardening-calibration-pr` | PR | section 8, stricter agent controls and matching test expectations are not findings without concrete impact |
 | `tool-output-secret-leak-file` | File | 2.15, credentials through the tool boundary |
 | `llm-output-to-markdown-file` | File | 2.5/2.15, model output rendered into markdown |
 | `no-lockfile-file` | File | 2.1, no lockfile at all |

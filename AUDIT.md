@@ -225,6 +225,8 @@ Do not flag:
 - Dependency CVEs that do not affect this usage: unreachable code paths or dev-only dependencies are at most LOW. This exclusion is void where dev dependencies reach a production build.
 - Missing security headers on platforms that inject them (CDNs, gateways, PaaS).
 - Policy-reinjection tooling that feeds a repository's own governance file back to its own agent session. A hook that reads a repo-controlled AGENTS.md and emits it as lifecycle context under a binding-instruction header is a delivery mechanism for the trusted channel, not untrusted content entering it. The directive wording belongs to the policy being delivered.
+- Security hardening that narrows an agent's command surface is not a finding by itself. Do not flag an `allow` to `ask` or `ask` to `deny` transition when the review target shows no concrete security, correctness, data-loss, or required-workflow failure. Do not request restored capability solely to preserve an agent workflow.
+- Tests that change an expected `allow` or `ask` result to `deny` are not findings when the changed expectation matches the implemented security policy. Flag only tests that stop exercising the stated control, contradict the implemented policy, or hide a concrete failure.
 
 Verify before dismissing:
 - Confirm test credentials are inert in production: not read by prod config, not valid against any real service. A "test" key with real entropy is real (2.3).
