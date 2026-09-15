@@ -10,6 +10,7 @@ import os
 import re
 import subprocess
 import sys
+from pathlib import Path
 
 try:
     from scripts.trusted_git import run_git
@@ -18,6 +19,19 @@ except ModuleNotFoundError:
 
 DEFAULT_PREFIXES = ("feat", "fix", "chore", "docs", "test")
 EXEMPT_BRANCHES = ("main", "master", "HEAD")
+PROHIBITED_AGENT_PREFIX = "claude/"
+BRANCH_BANNED_TOKENS_PATH = Path(__file__).resolve().with_name(
+    "branch_name_bans.txt"
+)
+FOREIGN_TOKENS = frozenset(
+    "el la de que una para con las los por como pero esta este cuando "
+    "le des une est dans avec pas pour sont vous nous cette mais der die "
+    "das und ist nicht auch eine einen sich auf nao dos com sao isso "
+    "il di che sono questo anche sul".split()
+)
+TECHNICAL_SUFFIXES = frozenset(
+    ("base64", "es2022", "oauth2", "python310", "sha256")
+)
 
 
 def _pattern(prefixes: tuple[str, ...]) -> re.Pattern:
@@ -26,16 +40,59 @@ def _pattern(prefixes: tuple[str, ...]) -> re.Pattern:
     return re.compile(rf"^(?:{prefix_group})/[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
+def _load_banned_tokens() -> frozenset[str]:
+    """Load exact branch tokens that are unsuitable for repository names."""
+    try:
+        values = BRANCH_BANNED_TOKENS_PATH.read_text(encoding="ascii")
+    except (OSError, UnicodeDecodeError):
+        return frozenset()
+    return frozenset(
+        line.strip().casefold()
+        for line in values.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    )
+
+
+def _description_violations(branch: str) -> list[str]:
+    """Return violations for opaque, vulgar, or clearly foreign tokens."""
+    description = branch.split("/", 1)[-1]
+    tokens = description.split("-")
+    banned_tokens = _load_banned_tokens()
+    violations = []
+    for token in tokens:
+        if token.casefold() in banned_tokens:
+            violations.append(
+                f"branch '{branch}' contains a prohibited vulgarity token"
+            )
+        if token.casefold() in FOREIGN_TOKENS:
+            violations.append(
+                f"branch '{branch}' contains a clearly non-English token"
+            )
+    final_token = tokens[-1]
+    if (final_token.casefold() not in TECHNICAL_SUFFIXES
+            and 6 <= len(final_token) <= 12
+            and any(character.isalpha() for character in final_token)
+            and any(character.isdigit() for character in final_token)):
+        violations.append(
+            f"branch '{branch}' ends with an opaque mixed alphanumeric token"
+        )
+    return violations
+
+
 def find_violations(
     branch: str,
     prefixes: tuple[str, ...] = DEFAULT_PREFIXES,
     strict: bool = False,
 ) -> list[str]:
     """Return a violation message if `branch` breaks the naming convention."""
+    if branch.casefold().startswith(PROHIBITED_AGENT_PREFIX):
+        return [
+            f"branch '{branch}' uses the prohibited claude/ agent prefix"
+        ]
     if not strict and (not branch or branch in EXEMPT_BRANCHES):
         return []
     if _pattern(prefixes).match(branch):
-        return []
+        return _description_violations(branch)
     allowed = ", ".join(f"{prefix}/" for prefix in prefixes)
     return [f"branch '{branch}' does not match <type>/<kebab-description> ({allowed})"]
 

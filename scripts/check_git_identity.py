@@ -42,6 +42,14 @@ except ModuleNotFoundError:
         resolve_git = None
         run_git = None
 
+try:
+    from scripts.trusted_gh import authenticated_account
+except ModuleNotFoundError:
+    try:
+        from trusted_gh import authenticated_account
+    except ModuleNotFoundError:
+        authenticated_account = None
+
 NOREPLY = re.compile(
     r"\A(?:[0-9]+\+)?[A-Za-z0-9-]+(?:\[bot\])?@users\.noreply\.github\.com\Z",
     re.IGNORECASE,
@@ -55,26 +63,38 @@ GITHUB_COMMITTER = "noreply@github.com"
 # Git treats each of these as an explicitly given identity, in this order.
 # A checker that read only user.email would block harnesses and CI systems
 # that supply one through the environment instead.
-NAME_SOURCES = (
+AUTHOR_NAME_SOURCES = (
     ("env", "GIT_AUTHOR_NAME"),
+    ("config", "user.name"),
+)
+COMMITTER_NAME_SOURCES = (
     ("env", "GIT_COMMITTER_NAME"),
     ("config", "user.name"),
 )
-EMAIL_SOURCES = (
+AUTHOR_EMAIL_SOURCES = (
     ("env", "GIT_AUTHOR_EMAIL"),
+    ("config", "user.email"),
+    ("env", "EMAIL"),
+)
+COMMITTER_EMAIL_SOURCES = (
     ("env", "GIT_COMMITTER_EMAIL"),
     ("config", "user.email"),
     ("env", "EMAIL"),
 )
 
-GH_TIMEOUT_SECONDS = 5
+HISTORY_CANDIDATE_LIMIT = 5
+HISTORY_COMMIT_LIMIT = 50
 
 FIX_MESSAGE = (
-    "fix: ask the user which name and email to commit under, then set them:\n"
+    "fix: derive or list identity candidates, then request explicit confirmation:\n"
     "  git config user.name  '<login>'\n"
     "  git config user.email '<id>+<login>@users.noreply.github.com'\n"
-    "Do not invent an identity, and do not copy one out of this repository's\n"
-    "history. An authenticated gh is not a git identity."
+    "Set the confirmed identity only in this repository. Never auto-select a\n"
+    "history candidate. An authenticated gh is not a git identity."
+)
+NUMBERED_NOREPLY = re.compile(
+    r"\A[0-9]+\+[A-Za-z0-9-]+@users\.noreply\.github\.com\Z",
+    re.IGNORECASE,
 )
 
 
@@ -226,14 +246,18 @@ def worktree_identity(repo=None) -> dict:
     result = run_git(repository, ["version"], runner=subprocess.run)
     if result.returncode != 0:
         raise subprocess.CalledProcessError(result.returncode, "git version")
-    name = _first_explicit(NAME_SOURCES, repository)
-    email = _first_explicit(EMAIL_SOURCES, repository)
+    author_name = _first_explicit(AUTHOR_NAME_SOURCES, repository)
+    committer_name = _first_explicit(COMMITTER_NAME_SOURCES, repository)
+    author_email = _first_explicit(AUTHOR_EMAIL_SOURCES, repository)
+    committer_email = _first_explicit(COMMITTER_EMAIL_SOURCES, repository)
+    committer_name = committer_name or author_name
+    committer_email = committer_email or author_email
     return {
         "label": "worktree",
-        "author_email": email,
-        "committer_email": email,
-        "unset_name": not name,
-        "unset_email": not email,
+        "author_email": author_email,
+        "committer_email": committer_email,
+        "unset_name": not author_name or not committer_name,
+        "unset_email": not author_email or not committer_email,
     }
 
 
@@ -278,6 +302,71 @@ def unpushed_identities(repo=None) -> list:
     return log_identities(revisions, repository)
 
 
+def account_identity_candidate(account: dict, configured_name: str) -> tuple:
+    """Derive a repository-local identity from authenticated GitHub metadata."""
+    account_id = account.get("id")
+    login = account.get("login", "")
+    if not isinstance(account_id, int) or account_id < 1:
+        raise ValueError("GitHub account ID is invalid")
+    if not isinstance(login, str) or not re.fullmatch(r"[A-Za-z0-9-]{1,39}", login):
+        raise ValueError("GitHub account login is invalid")
+    name = configured_name.strip() or login
+    return name, f"{account_id}+{login}@users.noreply.github.com"
+
+
+def strict_identity_violations(identities: list, repo=None) -> list[str]:
+    """Require every selected identity to match the authenticated operator."""
+    repository = repo or os.getcwd()
+    if authenticated_account is None:
+        return ["trusted GitHub account lookup is unavailable"]
+    try:
+        account = authenticated_account(repository)
+        expected_email = account_identity_candidate(
+            account, _config("user.name", repository)
+        )[1]
+    except (OSError, subprocess.TimeoutExpired, ValueError) as error:
+        return [f"trusted GitHub account lookup failed: {error}"]
+    violations = []
+    for identity in identities:
+        for role in ("author", "committer"):
+            email = identity[f"{role}_email"].strip()
+            if email.lower() != expected_email.lower():
+                violations.append(
+                    f"{identity['label']}: {role} email does not match the "
+                    "authenticated operator"
+                )
+    return violations
+
+
+def history_identity_candidates(repo=None) -> list:
+    """Return bounded noreply identity candidates from local commit metadata."""
+    repository = repo or os.getcwd()
+    result = run_git(
+        repository,
+        ["log", "--no-ext-diff", f"-n{HISTORY_COMMIT_LIMIT}",
+         "--format=%an%x00%ae%x00%cn%x00%ce", "--all", "--"],
+        check=True,
+        runner=subprocess.run,
+    )
+    candidates = []
+    seen = set()
+    for line in result.stdout.splitlines():
+        fields = line.split("\x00")
+        if len(fields) != 4:
+            raise ValueError("git log returned malformed identity candidates")
+        for name, email in ((fields[0], fields[1]), (fields[2], fields[3])):
+            candidate = (name.strip(), email.strip())
+            if not candidate[0] or not NUMBERED_NOREPLY.fullmatch(candidate[1]):
+                continue
+            if candidate in seen:
+                continue
+            seen.add(candidate)
+            candidates.append(candidate)
+            if len(candidates) >= HISTORY_CANDIDATE_LIMIT:
+                return candidates
+    return candidates
+
+
 def _allowed(email: str, pattern: re.Pattern) -> bool:
     """Return True when `email` matches the allowlist pattern."""
     return bool(pattern.match(email.strip()))
@@ -313,21 +402,15 @@ def find_violations(identities: list, pattern: re.Pattern = NOREPLY) -> list:
     return violations
 
 
-def gh_advisory(email: str) -> str:
+def gh_advisory(email: str, repo=None) -> str:
     """Return a note about the gh-authenticated account. Never blocks."""
+    if authenticated_account is None:
+        return "note: trusted gh support is unavailable, so the configured account is unverified"
     try:
-        result = subprocess.run(
-            ["gh", "api", "user", "--jq", ".login"],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=GH_TIMEOUT_SECONDS,
-        )
-    except (OSError, subprocess.TimeoutExpired):
+        account = authenticated_account(repo or os.getcwd())
+    except (OSError, subprocess.TimeoutExpired, ValueError):
         return "note: gh is unavailable, so the account behind this identity is unverified"
-    login = result.stdout.strip()
-    if result.returncode != 0 or not login:
-        return "note: gh is not authenticated, so the account behind this identity is unverified"
+    login = account["login"]
     match = NOREPLY_LOGIN.match(email.strip())
     if not match:
         return (
@@ -337,6 +420,30 @@ def gh_advisory(email: str) -> str:
     if match.group("login").lower() != login.lower():
         return f"note: gh is authenticated as '{login}' but commits would be authored as '{email}'"
     return ""
+
+
+def bootstrap_identity_advisory(repo=None) -> str:
+    """Return one confirmation-first identity proposal or history fallback."""
+    repository = repo or os.getcwd()
+    if authenticated_account is not None:
+        try:
+            account = authenticated_account(repository)
+            name = _config("user.name", repository)
+            candidate = account_identity_candidate(account, name)
+            return (
+                "identity candidate from authenticated gh for explicit confirmation: "
+                f"repository-local name '{candidate[0]}', email '{candidate[1]}'"
+            )
+        except (OSError, subprocess.TimeoutExpired, ValueError):
+            pass
+    candidates = history_identity_candidates(repository)
+    if not candidates:
+        return "identity candidate unavailable; ask for a repository-local name and email"
+    rendered = "; ".join(f"'{name}' <{email}>" for name, email in candidates)
+    return (
+        "local history candidates for explicit confirmation only; never auto-select: "
+        f"{rendered}"
+    )
 
 
 def config_only_advisory(repo=None) -> str:
@@ -374,13 +481,22 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="report the gh account and user.useConfigOnly; never changes the exit code",
     )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="require author and committer emails to match authenticated gh",
+    )
     return parser
 
 
 def _print_advisories(identities: list, repo=None) -> None:
     """Print the non-blocking machine and account notes."""
     email = identities[0]["author_email"] if identities else ""
-    for note in (config_only_advisory(repo), gh_advisory(email)):
+    notes = [config_only_advisory(repo), gh_advisory(email, repo)]
+    if any(identity["unset_name"] or identity["unset_email"]
+           for identity in identities):
+        notes.append(bootstrap_identity_advisory(repo))
+    for note in notes:
         if note:
             print(note)
 
@@ -390,6 +506,10 @@ def main() -> int:
     args = parser.parse_args()
     if bool(args.base) != bool(args.head):
         parser.error("--base and --head must be given together")
+    if args.strict and args.base:
+        parser.error("--strict cannot validate a commit range")
+    if args.strict and args.allow:
+        parser.error("--strict cannot be combined with --allow")
     pattern = re.compile(args.allow) if args.allow else NOREPLY
 
     try:
@@ -404,6 +524,8 @@ def main() -> int:
         return 1
 
     violations = find_violations(identities, pattern)
+    if args.strict:
+        violations.extend(strict_identity_violations(identities, args.repo))
     if violations:
         for message in violations:
             print(message, file=sys.stderr)

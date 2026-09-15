@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Track drift between files copied from abuzucom/agents and their source.
+"""Track drift between adopted files and abuzucom/agents.
 
-foucault copies a deliberate subset of abuzucom/agents (AGENTS.md's kept
-rules, item 9 of the adoption plan): style/prose checkers, the branch-name
-gate, and the git-identity gate. upstream-files.json pins the abuzucom/agents
-commit this subset was copied from and a line-ending-normalized SHA-256 of
-each copied file as adopted.
+upstream-files.json pins the adopted abuzucom/agents commit and records a
+line-ending-normalized SHA-256 for each file copied without local adaptation.
+Local adaptations remain in a separate manifest section.
 
 Two modes:
   --check-local     (default) recompute local hashes and compare against the
@@ -107,6 +105,7 @@ def write_manifest(files: list[str], agents_commit: str) -> None:
         "agents_repo": "abuzucom/agents",
         "agents_commit": agents_commit,
         "files": {rel: normalized_sha256(REPO_ROOT / rel) for rel in sorted(files)},
+        "local_adapted_files": {},
     }
     MANIFEST_PATH.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"wrote {MANIFEST_PATH} ({len(files)} files, pinned at {agents_commit})")

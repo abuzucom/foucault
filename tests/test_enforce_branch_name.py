@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 """Tests for hooks/enforce_branch_name.py and its wiring.
 
-Runs the hook as a subprocess against synthetic Claude Code payloads, the
-same path the harness uses, rather than asserting on mocks. Branch names
-come from `GITHUB_HEAD_REF`, which scripts/check_branch_name.py reads before
-falling back to `git rev-parse`, so results do not depend on which branch
-the test run happens to be on.
+Run the hook as a subprocess against synthetic client payloads. Store branch
+names in isolated local HEAD fixtures. Keep CI environment metadata separate
+from local branch enforcement.
 
 The settings tests guard the wiring: a hook nobody registered enforces
 nothing, and an edit to `.claude/settings.json` that drops an event would
 otherwise pass every behavioral test in this file.
 """
 import importlib.util
+import io
 import json
 import os
 import shutil
@@ -19,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 from unittest.mock import patch
 
@@ -27,6 +27,7 @@ HOOK_PATH = REPO_ROOT / "hooks" / "enforce_branch_name.py"
 LIVE_SETTINGS = REPO_ROOT / ".claude" / "settings.json"
 EXAMPLE_SETTINGS = REPO_ROOT / "hooks" / "claude-code-settings.example.json"
 CHECKER_PATH = REPO_ROOT / "scripts" / "check_branch_name.py"
+TRUSTED_GIT_PATH = REPO_ROOT / "scripts" / "trusted_git.py"
 
 VIOLATING_BRANCH = "claude/session-start-hook-branch-check-5b33fv"
 CONFORMING_BRANCH = "feat/session-start-branch-check"
@@ -44,11 +45,41 @@ def _load_hook_module():
 hook = _load_hook_module()
 
 
-def run_hook(payload, branch: str, client: str = "claude") -> subprocess.CompletedProcess:
-    """Run the hook as the harness does: JSON on stdin, branch from the env."""
+def run_hook(
+    payload,
+    branch: str,
+    client: str = "claude",
+    project_dir: Path = REPO_ROOT,
+) -> subprocess.CompletedProcess:
+    """Run the hook against a local branch fixture without changing the checkout."""
+    if project_dir != REPO_ROOT:
+        return _run_fixture_hook(payload, branch, client, project_dir)
+    with tempfile.TemporaryDirectory() as directory:
+        return _run_fixture_hook(payload, branch, client, Path(directory))
+
+
+def _run_fixture_hook(payload, branch: str, client: str, project_dir: Path):
+    """Create local metadata and send a payload to the installed hook."""
+    git_dir = project_dir / ".git"
+    git_dir.mkdir(exist_ok=True)
+    (git_dir / "objects").mkdir(exist_ok=True)
+    (git_dir / "refs").mkdir(exist_ok=True)
+    head = "0" * 40 if branch == "HEAD" else "ref: refs/heads/" + branch
+    (git_dir / "HEAD").write_text(head + "\n", encoding="utf-8")
+    config = git_dir / "config"
+    if not config.exists():
+        config.write_text("[core]\nrepositoryformatversion = 0\nbare = false\n", encoding="utf-8")
+    if payload is not None:
+        payload = dict(payload)
+        payload["cwd"] = str(project_dir)
+        if "workspacePaths" in payload:
+            payload["workspacePaths"] = [
+                str(project_dir) if path == str(REPO_ROOT) else path
+                for path in payload["workspacePaths"]
+            ]
     environment = dict(os.environ)
-    environment["GITHUB_HEAD_REF"] = branch
-    environment["CLAUDE_PROJECT_DIR"] = str(REPO_ROOT)
+    environment.pop("GITHUB_HEAD_REF", None)
+    environment["CLAUDE_PROJECT_DIR"] = str(project_dir)
     return subprocess.run(
         [sys.executable, str(HOOK_PATH), "--client", client],
         input=json.dumps(payload) if payload is not None else "",
@@ -63,6 +94,7 @@ def bash_payload(command: str) -> dict:
     """Return a PreToolUse payload for a Bash tool call."""
     return {
         "hook_event_name": "PreToolUse",
+        "permission_mode": "default",
         "tool_name": "Bash",
         "tool_input": {"command": command},
     }
@@ -89,6 +121,7 @@ class CheckerContractTest(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 1)
         self.assertIn(VIOLATING_BRANCH, result.stderr)
+        self.assertIn("prohibited", result.stderr)
 
     def test_conforming_prefixes_are_accepted(self):
         for branch in ("feat/a-b", "fix/a-b", "chore/a-b", "docs/a-b", "test/a-b"):
@@ -124,6 +157,10 @@ class SessionStartTest(unittest.TestCase):
         self.assertIn(VIOLATING_BRANCH, specific["additionalContext"])
         self.assertIn("STOP", specific["additionalContext"])
         self.assertIn("git branch -m", specific["additionalContext"])
+        self.assertIn("must infer the name", specific["additionalContext"])
+        self.assertNotIn("provide a branch name", specific["additionalContext"])
+        self.assertNotIn("choose the branch name", specific["additionalContext"])
+        self.assertNotIn("enter the exact branch name", specific["additionalContext"])
         self.assertNotIn("sign-off", specific["additionalContext"])
         self.assertEqual(output["systemMessage"], specific["additionalContext"])
 
@@ -177,9 +214,13 @@ class PreToolUseTest(unittest.TestCase):
         result = run_hook(bash_payload("git push -u origin HEAD"), CONFORMING_BRANCH)
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_rename_command_is_never_blocked(self):
+    def test_rename_command_requests_native_authorization(self):
         result = run_hook(bash_payload("git branch -m feat/x"), VIOLATING_BRANCH)
         self.assertEqual(result.returncode, 0, result.stderr)
+        output = json.loads(result.stdout)
+        decision = output["hookSpecificOutput"]["permissionDecision"]
+        self.assertEqual(decision, "ask")
+        self.assertIn("MANDATORY BRANCH CORRECTION", result.stdout)
 
     def test_read_only_git_command_is_blocked(self):
         for command in ("git status", "git log --oneline -5", "git branch --show-current"):
@@ -214,6 +255,193 @@ class PreToolUseTest(unittest.TestCase):
         allowed = run_hook(bash_payload("git switch -c feat/x"), "main")
         self.assertEqual(blocked.returncode, BLOCKING_EXIT_CODE)
         self.assertEqual(allowed.returncode, 0, allowed.stderr)
+        output = json.loads(allowed.stdout)
+        self.assertEqual(
+            output["hookSpecificOutput"]["permissionDecision"],
+            "ask",
+        )
+
+    def test_active_rebase_allows_abort_before_detached_recovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project_dir = Path(directory)
+            (project_dir / ".git" / "rebase-merge").mkdir(parents=True)
+            result = _run_fixture_hook(
+                bash_payload("git rebase --abort"), "HEAD", "claude", project_dir)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = json.loads(result.stdout)
+        self.assertEqual(
+            output["hookSpecificOutput"]["permissionDecision"],
+            "ask",
+        )
+
+    def test_active_rebase_denies_branch_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project_dir = Path(directory)
+            (project_dir / ".git" / "rebase-apply").mkdir(parents=True)
+            result = _run_fixture_hook(
+                bash_payload("git switch -c feat/recovered"), "HEAD", "claude", project_dir)
+        self.assertEqual(result.returncode, BLOCKING_EXIT_CODE)
+        self.assertIn("rebase", result.stderr)
+
+    def test_rebase_lookup_failure_denies_invalid_branch_tool(self):
+        output = io.StringIO()
+        with patch.object(hook, "rebase_is_active", side_effect=OSError("metadata unavailable")):
+            with redirect_stderr(output):
+                result = hook._handle_invalid_branch(
+                    bash_payload("git status"),
+                    str(REPO_ROOT),
+                    "claude",
+                    "branch is invalid",
+                    VIOLATING_BRANCH,
+                )
+        self.assertEqual(result, BLOCKING_EXIT_CODE)
+        self.assertIn("rebase lookup failed", output.getvalue())
+        self.assertIn("metadata unavailable", output.getvalue())
+
+    def test_claude_branch_creation_is_blocked_from_conforming_branch(self):
+        commands = (
+            f"git switch -c {VIOLATING_BRANCH}",
+            f"git checkout -b {VIOLATING_BRANCH}",
+            f"git branch {VIOLATING_BRANCH}",
+            f"git worktree add -b {VIOLATING_BRANCH} ../worktree",
+            f"git update-ref refs/heads/{VIOLATING_BRANCH} HEAD",
+            f"git symbolic-ref HEAD refs/heads/{VIOLATING_BRANCH}",
+            f"git fetch origin HEAD:refs/heads/{VIOLATING_BRANCH}",
+        )
+        for command in commands:
+            with self.subTest(command=command):
+                result = run_hook(bash_payload(command), CONFORMING_BRANCH)
+                self.assertEqual(result.returncode, BLOCKING_EXIT_CODE)
+                self.assertIn("prohibited", result.stderr)
+
+    def test_claude_push_target_is_blocked_from_conforming_branch(self):
+        commands = (
+            f"git push origin {VIOLATING_BRANCH}",
+            f"git push origin HEAD:refs/heads/{VIOLATING_BRANCH}",
+            f"git push origin {CONFORMING_BRANCH}:{VIOLATING_BRANCH}",
+        )
+        for command in commands:
+            with self.subTest(command=command):
+                result = run_hook(bash_payload(command), CONFORMING_BRANCH)
+                self.assertEqual(result.returncode, BLOCKING_EXIT_CODE)
+                self.assertIn("prohibited", result.stderr)
+
+    def test_read_only_prohibited_branch_references_are_allowed(self):
+        for command in ("git log claude/old-branch", "git diff claude/x"):
+            with self.subTest(command=command):
+                result = run_hook(bash_payload(command), CONFORMING_BRANCH)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_direct_metadata_writes_are_blocked(self):
+        commands = (
+            "printf 'ref: refs/heads/claude/x' > .git/HEAD",
+            "printf 'refs/heads/claude/x' >> .git/packed-refs",
+            "touch .git/refs/heads/claude/x",
+            "Set-Content .git/worktrees/x/HEAD refs/heads/claude/x",
+        )
+        for command in commands:
+            with self.subTest(command=command):
+                result = run_hook(bash_payload(command), CONFORMING_BRANCH)
+                self.assertEqual(result.returncode, BLOCKING_EXIT_CODE)
+                self.assertIn("prohibited", result.stderr)
+
+    def test_quote_split_metadata_path_is_blocked(self):
+        command = "touch .git/refs/heads/cl''aude/x"
+        result = run_hook(bash_payload(command), CONFORMING_BRANCH)
+        self.assertEqual(result.returncode, BLOCKING_EXIT_CODE)
+        self.assertIn("prohibited", result.stderr)
+
+    def test_cmd_tools_block_prohibited_branch_targets(self):
+        for tool_name in ("Cmd", "CMD", "CommandPrompt"):
+            with self.subTest(tool_name=tool_name):
+                payload = {
+                    "hook_event_name": "PreToolUse",
+                    "tool_name": tool_name,
+                    "tool_input": {"command": f"git branch {VIOLATING_BRANCH}"},
+                }
+                result = run_hook(payload, CONFORMING_BRANCH)
+                self.assertEqual(result.returncode, BLOCKING_EXIT_CODE)
+
+    def test_file_tools_block_prohibited_metadata_writes(self):
+        payloads = (
+            {
+                "hook_event_name": "PreToolUse",
+                "tool_name": "Write",
+                "tool_input": {
+                    "file_path": ".git/refs/heads/claude/x",
+                    "content": "0123456789abcdef\n",
+                },
+            },
+            {
+                "hook_event_name": "PreToolUse",
+                "tool_name": "Edit",
+                "tool_input": {
+                    "file_path": ".git/HEAD",
+                    "old_string": "ref: refs/heads/feat/x",
+                    "new_string": "ref: refs/heads/claude/x",
+                },
+            },
+        )
+        for payload in payloads:
+            with self.subTest(tool_name=payload["tool_name"]):
+                result = run_hook(payload, CONFORMING_BRANCH)
+                self.assertEqual(result.returncode, BLOCKING_EXIT_CODE)
+
+    def test_repository_alias_target_is_blocked(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            project_dir = Path(temporary)
+            scripts_dir = project_dir / "scripts"
+            scripts_dir.mkdir()
+            shutil.copy(CHECKER_PATH, scripts_dir / CHECKER_PATH.name)
+            shutil.copy(TRUSTED_GIT_PATH, scripts_dir / TRUSTED_GIT_PATH.name)
+            subprocess.run(
+                ["git", "init", "-q", "-b", "main"],
+                cwd=project_dir,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "alias.unsafe", "switch -c claude/alias"],
+                cwd=project_dir,
+                check=True,
+            )
+            result = run_hook(
+                bash_payload("git unsafe"),
+                CONFORMING_BRANCH,
+                project_dir=project_dir,
+            )
+        self.assertEqual(result.returncode, BLOCKING_EXIT_CODE)
+        self.assertIn("prohibited", result.stderr)
+
+    def test_uninspectable_aliases_fail_closed(self):
+        aliases = (
+            (("alias.first", "second"), ("alias.second", "first")),
+            (("alias.first", "switch -c 'unterminated"),),
+        )
+        for alias_rows in aliases:
+            with self.subTest(aliases=alias_rows):
+                with tempfile.TemporaryDirectory() as temporary:
+                    project_dir = Path(temporary)
+                    scripts_dir = project_dir / "scripts"
+                    scripts_dir.mkdir()
+                    shutil.copy(CHECKER_PATH, scripts_dir / CHECKER_PATH.name)
+                    shutil.copy(TRUSTED_GIT_PATH, scripts_dir / TRUSTED_GIT_PATH.name)
+                    subprocess.run(
+                        ["git", "init", "-q", "-b", "main"],
+                        cwd=project_dir,
+                        check=True,
+                    )
+                    for key, value in alias_rows:
+                        subprocess.run(
+                            ["git", "config", key, value],
+                            cwd=project_dir,
+                            check=True,
+                        )
+                    result = run_hook(
+                        bash_payload("git first"),
+                        CONFORMING_BRANCH,
+                        project_dir=project_dir,
+                    )
+                self.assertEqual(result.returncode, BLOCKING_EXIT_CODE)
 
     def test_correction_command_rejects_chaining(self):
         result = run_hook(
@@ -246,14 +474,73 @@ class PreToolUseTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["decision"], "deny")
 
+    def test_antigravity_denies_zero_workspaces(self):
+        payload = {
+            "toolCall": {"name": "view_file", "args": {"AbsolutePath": "README.md"}},
+            "workspacePaths": [],
+        }
+        result = run_hook(payload, CONFORMING_BRANCH, "antigravity")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = json.loads(result.stdout)
+        self.assertEqual(output["decision"], "deny")
+        self.assertIn("received 0", output["reason"])
+
+    def test_antigravity_denies_multiple_workspaces(self):
+        payload = {
+            "toolCall": {"name": "view_file", "args": {"AbsolutePath": "README.md"}},
+            "workspacePaths": [str(REPO_ROOT), str(REPO_ROOT)],
+        }
+        result = run_hook(payload, CONFORMING_BRANCH, "antigravity")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = json.loads(result.stdout)
+        self.assertEqual(output["decision"], "deny")
+        self.assertIn("received 2", output["reason"])
+
     def test_powershell_command_line_allows_exact_recovery(self):
         payload = {
             "hook_event_name": "PreToolUse",
+            "permission_mode": "default",
             "tool_name": "PowerShell",
             "tool_input": {"CommandLine": "git branch -m feat/recovered"},
         }
         result = run_hook(payload, VIOLATING_BRANCH)
         self.assertEqual(result.returncode, 0, result.stderr)
+        output = json.loads(result.stdout)
+        self.assertEqual(
+            output["hookSpecificOutput"]["permissionDecision"],
+            "ask",
+        )
+
+    def test_stop_event_blocks_refusal_on_claude_branch(self):
+        payload = {
+            "hook_event_name": "Stop",
+            "stop_hook_active": False,
+        }
+        result = run_hook(payload, VIOLATING_BRANCH)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = json.loads(result.stdout)
+        self.assertEqual(output["decision"], "block")
+        self.assertIn("Do not refuse Git work", output["reason"])
+
+    def test_stop_event_allows_completion_on_conforming_branch(self):
+        payload = {
+            "hook_event_name": "Stop",
+            "stop_hook_active": False,
+        }
+        result = run_hook(payload, CONFORMING_BRANCH)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), "")
+
+    def test_active_stop_hook_allows_bounded_completion(self):
+        for event_name in ("Stop", "SubagentStop"):
+            with self.subTest(event_name=event_name):
+                payload = {
+                    "hook_event_name": event_name,
+                    "stop_hook_active": True,
+                }
+                result = run_hook(payload, VIOLATING_BRANCH)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.strip(), "")
 
     def test_shell_tool_without_command_passes_on_valid_branch(self):
         payload = {
@@ -394,16 +681,17 @@ class BlockedCommandTest(unittest.TestCase):
 
 
 class FindViolationTest(unittest.TestCase):
-    """A repo without the checker cannot clear strict preflight."""
+    """Missing local metadata or an installed checker must fail closed."""
 
     def test_absent_checker_yields_violation(self):
         with patch.dict(os.environ, {"GITHUB_HEAD_REF": ""}):
             self.assertTrue(hook.find_violation(str(Path(__file__).parent)))
 
-    def test_explicit_project_without_checker_fails_closed(self):
+    def test_policy_root_without_checker_fails_closed(self):
         with tempfile.TemporaryDirectory() as directory:
-            violation = hook.check_branch(
-                CONFORMING_BRANCH, project_dir=directory)
+            with patch.object(hook.core, "policy_root", return_value=directory):
+                violation = hook.check_branch(
+                    CONFORMING_BRANCH, project_dir=str(REPO_ROOT))
         self.assertEqual(violation, "branch checker is missing")
 
 
@@ -483,33 +771,37 @@ class SettingsWiringTest(unittest.TestCase):
             for entry in matcher.get("hooks", [])
         ]
 
-    def _assert_registers_both_events(self, path: Path):
+    def _assert_registers_required_events(self, path: Path):
         settings = json.loads(path.read_text(encoding="utf-8"))
-        session_start = self._commands(settings, "SessionStart")
-        pre_tool_use = self._commands(settings, "PreToolUse")
-        self.assertTrue(
-            any("enforce_branch_name.py" in command for command in session_start),
-            f"{path.name} does not register the hook for SessionStart",
-        )
-        self.assertTrue(
-            any("enforce_branch_name.py" in command for command in pre_tool_use),
-            f"{path.name} does not register the hook for PreToolUse",
-        )
+        for event in (
+            "SessionStart",
+            "UserPromptSubmit",
+            "PreToolUse",
+            "Stop",
+            "SubagentStop",
+        ):
+            commands = self._commands(settings, event)
+            self.assertTrue(
+                any("enforce_branch_name.py" in command for command in commands),
+                f"{path.name} does not register the hook for {event}",
+            )
 
     def test_live_settings_register_both_events(self):
-        self._assert_registers_both_events(LIVE_SETTINGS)
+        self._assert_registers_required_events(LIVE_SETTINGS)
 
     def test_example_settings_register_both_events(self):
-        self._assert_registers_both_events(EXAMPLE_SETTINGS)
+        self._assert_registers_required_events(EXAMPLE_SETTINGS)
 
-    # foucault adopts only the branch and identity gates from abuzucom/agents
-    # (docs/template-drift.md records the declined hooks and why). Per
-    # agents/README.md adoption step 14, a subset adopter trims this matrix
-    # to what was actually copied rather than asserting hooks that were
-    # deliberately left out.
     HOOK_MATCHERS = {
+        "block_infrastructure_access.py": {
+            "Edit|Write|MultiEdit|NotebookEdit|Read|Glob|Grep"
+        },
+        "block_destructive_bash.py": {"Bash"},
+        "block_destructive_cmd.py": {"Cmd|CMD|CommandPrompt"},
+        "block_destructive_powershell.py": {"PowerShell"},
         "enforce_branch_name.py": {"*"},
         "enforce_git_identity.py": {"Bash"},
+        "require_consent.py": {"Edit|Write|MultiEdit|NotebookEdit"},
     }
 
     @staticmethod

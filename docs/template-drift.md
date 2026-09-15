@@ -1,92 +1,61 @@
 # Template drift against abuzucom/agents
 
-`abuzucom/agents` is the org's primary source of truth for AI-development
-policy. This file records how foucault's adoption differs from it, per
-agents' own `DRIFT.md` convention (`docs/template-drift.md` in the
-adopting repository records local differences and reasons).
+`abuzucom/agents` is the upstream source for the adopted agent policy and
+enforcement bundle. This repository adopts commit
+`e1408dcfae9c8c714e8522d8236b58b6345ef2ba`, released upstream as 2.0.20.
 
-Pinned commit: `a7a066181a9995a26f5afcec95b0541ce99e9bab`
-(`abuzucom/agents`, dated 2026-08-31). `upstream-files.json` records a
-per-file hash of every copied file. Locally adapted files use the separate
-`local_adapted_files` section.
+## Adopted
 
-## Expected to differ
+- The complete upstream policy rules remain in `AGENTS.md`.
+- Supporting policy documents live under `docs/agent-policy/`.
+- The complete command, infrastructure, consent, lifecycle, branch, identity,
+  and GitHub gate set lives under `hooks/`.
+- Portable checkers, synchronization tooling, and trusted Git tooling live
+  under `scripts/`.
+- Shared gate files use `shared-files.json`.
+- Gate tests and hook coverage tooling live under `tests/` and `tools/`.
+- Claude, Codex, Gemini, and Antigravity configurations are installed.
 
-- `AGENTS.md` is a bespoke document adapted from `abuzucom/agents`'
-  generic template. It keeps the non-negotiable core (parameterization,
-  destructive-command authorization, test integrity, scope, draft PRs,
-  API compatibility, hashing, secrets, dependency authorization, git
-  identity), branch naming, git identity, hosted GitHub operations,
-  delivery evidence, and the full Style section
-  (impersonal voice, terse sentences, no em dash, ASCII-only, American
-  spelling, English-only, commit format). It drops container/runtime-root
-  rules, dependency-lockfile rules beyond the eval harness's own minimal
-  Python needs, concurrency and shared-mutable-state rules, and
-  function-size/nesting/line-length code-quality rules. This repository
-  has no application code, no Dockerfiles, and no concurrency for those
-  rules to govern.
-- No `scripts/sync.py`, no generated `CLAUDE.md`/`.cursorrules`/
-  `.windsurfrules`/`GEMINI.md`/`CONVENTIONS.md` copies, and no
-  `hooks/reinject_agents_policy.py` lifecycle reinjection. `AGENTS.md` is
-  the only instruction file for v1. Add a synced copy later, and only if a
-  specific tool in active use demonstrably ignores `AGENTS.md`.
-- No `.pre-commit-config.yaml`, no `sync-check.yml`,
-  `immutable-conflict-check.yml`, or `agents-md-compliance.yml`. This
-  repository's own CI (once wired) runs the copied checkers and the eval
-  harness directly rather than reusing agents' compliance workflows.
-- `scripts/trusted_gh.py` is locally adapted from the adopted trusted-tool
-  implementation. Its tests cover repository-safe lookup, proxy handling,
-  token output, and delivery-safe diagnostics.
-- `tests/test_enforce_branch_name.py` trims its `HOOK_MATCHERS` dict
-  from agents' full five-hook matrix (`enforce_branch_name.py`,
-  `enforce_git_identity.py`, `block_destructive_bash.py`,
-  `block_destructive_powershell.py`, `require_consent.py`) to the two
-  hooks foucault actually adopted, per agents' own adoption step 14
-  ("adapt settings and wiring assertions when adopting a subset").
-  `upstream-files.json` excludes this file because it deliberately departs
-  from upstream's byte content.
-- `hooks/claude-code-settings.example.json` and `.claude/settings.json`
-  carry foucault's own two-hook subset rather than agents' four-hook
-  example file content. `upstream-files.json` excludes both for the same
-  reason.
-- `AUDIT.md` (the product this repository ships) is exempt from
-  `AGENTS.md`'s Style section. `AGENTS.md`'s Style section states the
-  reasoning. A second-person system prompt by design, it differs from this
-  repository's governance prose.
+## Locally adapted
+
+- `AGENTS.md` omits upstream repository-only orientation and retains
+  Foucault-specific audit, evaluator, fixture, and provenance rules.
+- `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, and
+  `docs/gate-threat-model.md` describe this repository's product and CI.
+- `scripts/trusted_gh.py` preserves Foucault's bounded diagnostics and token
+  output denial while adopting current upstream repository-context routing.
+- `scripts/check_gate_adoption.py` validates all four client configurations.
+- `.github/workflows/ci.yml` combines upstream checks with Foucault's eval and
+  security-review jobs.
+- `.github/workflows/ci.yml` and `.pre-commit-config.yaml` adapt the upstream
+  test-first checker to the existing local workflow.
+- `README.md`, `docs/agent-policy/enforcement.md`, and
+  `docs/agent-policy/github.md` describe runtime approval and test-first
+  boundaries for the newer upstream contract.
+- Existing evaluator, delivery, workflow, and trusted GitHub tests remain
+  alongside the upstream gate tests.
 
 ## Not adopted
 
-- `scripts/check_banned_agents.py` (denied-vendor commit/PR-author check).
-  Distinct risk (vendor policy enforcement) from the branch/identity
-  misbehavior this adoption pass targets. Not copied.
-- `hooks/block_destructive_bash.py`, `hooks/block_destructive_powershell.py`
-  (destructive-command `PreToolUse` gate). Distinct risk (uncontrolled
-  deletion) from branch/identity misbehavior. Not copied.
-- `hooks/require_consent.py` (consent gate for direct edits to existing
-  test files). Distinct risk (silently weakened tests) from branch/identity
-  misbehavior. Not copied. `AGENTS.md` non-negotiable rule 2 covers the
-  same ground as a textual rule without the hook.
-- `scripts/check_persist_credentials.py`, `scripts/check_dockerfile_root.py`,
-  `scripts/check_weak_hashing.py`, `scripts/check_secrets_heuristic.py`,
-  `scripts/check_conflict_markers.py`, `scripts/check_compliance_tree.py`,
-  `scripts/run_tests.py`, `scripts/check_hook_coverage.py`,
-  `scripts/check_commit_message.py`, `scripts/check_pull_request_message.py`,
-  `scripts/sync.py`. Not relevant to a repository with no application code,
-  no Dockerfiles, and no multi-tool instruction sync.
-- `plan/HANDOFF.md.example` and its handoff-exempt prose-policy carve-out.
-  Not adopted; `scripts/prose_bans.txt`'s `[handoff-exempt]` section stays
-  present verbatim (it is a shared, hash-tracked file) but is inert here
-  since no `plan/HANDOFF.md.example` exists to exempt.
+- Upstream source-repository orientation in `AGENTS.md`.
+- Upstream source-repository adopter records and example security documents.
+- Upstream reusable compliance workflow files. Their checks are integrated
+  into this repository's existing CI.
+- Upstream `sync-check.yml`. Its new test-first step is integrated into the
+  existing local CI and pre-commit configuration.
+- The upstream project's own README, changelog, license, and project-only
+  examples.
 
-## True drift
+These omissions do not remove an applicable policy rule or enforcement gate.
+They record repository-specific ownership and workflow choices.
 
-None recorded. This section tracks a copied file's content diverging from
-its pinned upstream commit over time. Run
-`python scripts/check_upstream_drift.py --check-upstream --agents-path <checkout>`
-periodically (before each foucault release) and record any finding here
-with the reviewed outcome (adopted, declined, or partially adapted, and
-why). Update `upstream-files.json`'s pinned commit after review either way.
-Keeping the pin current keeps the record honest. For a foucault-side difference that looks like
-it should upstream instead, open an issue in `abuzucom/agents` naming the
-file and reason, per agents' own `DRIFT.md` "Opening a drift issue"
-process.
+## Drift review
+
+`upstream-files.json` records exact adopted files and their normalized
+SHA-256 hashes. `scripts/check_upstream_drift.py --check-local` detects local
+changes to those files. Review the adopted source against the pinned commit
+before changing the pin. Record every file as adopted, adapted, or declined.
+
+`shared-files.json` records the local integrity hashes for files that must
+remain identical across controlled adopters. Run
+`python scripts/sync.py --check-shared` after every shared gate change.

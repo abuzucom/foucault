@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   checks:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,7 +27,16 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.x'
+
+      - name: Install checker dependencies
+        run: python3 -m pip install --requirement requirements-checkers.txt
+
       - name: Branch name
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         run: python3 scripts/check_branch_name.py
 
       - name: Git identity
@@ -35,6 +45,73 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python3 scripts/check_git_identity.py --base "$BASE_SHA" --head "$HEAD_SHA"
 
+      - name: Banned-agent authorship
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/check_banned_agents.py --base "$BASE_SHA" --head "$HEAD_SHA"
+
+      - name: Commit attribution
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          python3 scripts/check_commit_attribution.py
+          --repo . --repository "${{ github.repository }}"
+          --base "$BASE_SHA" --head "$HEAD_SHA"
+
+      - name: External repository references
+        run: python3 scripts/check_external_pr_refs.py
+
+      - name: Pull request prose
+        run: python3 scripts/check_pull_request_message.py
+
+      - name: Gate adoption
+        run: python3 scripts/check_gate_adoption.py
+
+      - name: Hook launchers
+        run: python3 scripts/check_hook_launchers.py
+
+      - name: Shared gate manifest
+        run: python3 scripts/sync.py --check-shared
+
+      - name: Policy synchronization
+        run: python3 scripts/sync.py --check
+
+      - name: Policy size
+        run: python3 scripts/check_policy_size.py
+
+      - name: Workflow action pins
+        run: python3 scripts/check_action_pins.py
+
+      - name: Checkout credential persistence
+        run: python3 scripts/check_persist_credentials.py .github/workflows/*.yml
+
+      - name: Weak hashing
+        run: python3 scripts/check_weak_hashing.py scripts/*.py
+
+      - name: Secret heuristics
+        run: python3 scripts/check_secrets_heuristic.py scripts/*.py .github/workflows/*.yml Makefile
+
+      - name: Conflict markers
+        run: python3 scripts/check_conflict_markers.py
+
+      - name: Changelog
+        run: python3 scripts/check_changelog.py
+
+      - name: Changelog version advance
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/check_changelog.py --base "$BASE_SHA" --head "$HEAD_SHA"
+
+      - name: Test-first executable changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/check_test_first.py --base "$BASE_SHA" --head "$HEAD_SHA"
+
       - name: Eval corpus
         # Structure only. This repository ships no model credential, and
         # --model-call resolves to an importable module and executes its code,
@@ -42,7 +119,10 @@ jobs:
         run: python3 eval/run_eval.py
 
       - name: Hook tests
-        run: python3 -m unittest discover -s tests
+        run: python3 scripts/run_tests.py
+
+      - name: Hook coverage
+        run: python3 scripts/check_hook_coverage.py
 
       - name: Upstream drift
         run: python3 scripts/check_upstream_drift.py --check-local
@@ -60,3 +140,41 @@ jobs:
             # shellcheck disable=SC2086
             python3 "scripts/$checker.py" $files
           done
+
+  tests-windows:
+    if: github.event_name == 'pull_request'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.x'
+      - name: Install checker dependencies
+        run: python -m pip install --requirement requirements-checkers.txt
+      - name: Probe hook launchers
+        run: python scripts/check_hook_launchers.py
+      - name: Run platform gate tests
+        run: python -m unittest tests.test_gate_parity tests.test_platform_policy tests.test_trusted_gh -v
+
+  tests-macos:
+    if: github.event_name == 'pull_request'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.x'
+      - name: Install checker dependencies
+        run: python -m pip install --requirement requirements-checkers.txt
+      - name: Probe hook launchers
+        run: python scripts/check_hook_launchers.py
+      - name: Run platform gate tests
+        run: python -m unittest tests.test_gate_parity tests.test_platform_policy tests.test_trusted_gh -v
