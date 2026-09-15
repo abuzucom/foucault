@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.1.2] (2026-09-15)
+
+### Fixed
+
+- Made the adapter path test portable across Windows and Linux runners.
+
 ## [3.1.1] (2026-09-15)
 
 ### Fixed
