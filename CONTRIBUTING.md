@@ -53,3 +53,20 @@ Run hosted GitHub commands through `scripts/trusted_gh.py`:
 `python scripts/trusted_gh.py run <gh arguments>`. Verify branch and remote
 state before reporting a push. Read the pull request back before reporting
 its number or draft status.
+
+## PR security review
+
+Same-repository pull requests run `security-review-pr.yml`. The workflow uses
+the base branch workflow and never executes pull request files. Fork pull
+requests receive a skip result because no provider secret crosses that trust
+boundary.
+
+Provider changes require an update to `ci/model_providers.json`, the endpoint
+allowlist, adapter tests, and the provider documentation. Keep API keys in
+repository or organization secrets. Map the active provider key to
+`MODEL_API_KEY` in the trusted caller workflow.
+
+Run the adapter locally with `AUDIT_PROMPT_FILE`, `CASE_TEXT_FILE`, and
+`MODEL_API_KEY` set outside the repository. Run `python3 ci/call_model.py` for
+one request. Run `python3 eval/run_eval.py --model-call ci.call_model:call_model`
+for the live corpus. Never place review content in a command string.

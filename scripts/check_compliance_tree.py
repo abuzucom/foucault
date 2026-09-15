@@ -25,6 +25,7 @@ CODE_SUFFIXES = {
     ".jsx", ".mjs", ".php", ".py", ".pyw", ".rb", ".rs", ".ts",
     ".tsx",
 }
+EVALUATION_FIXTURE_PREFIX = "eval/cases/"
 TRUSTED_REQUIREMENTS_COMMAND = (
     "python -m pip install --requirement "
     "trusted-base/requirements-checkers.txt"
@@ -589,6 +590,7 @@ def _scan_blob(
     lower_path = path.lower()
     name = lower_path.rsplit("/", 1)[-1]
     is_yaml = lower_path.endswith((".yml", ".yaml"))
+    is_evaluation_fixture = lower_path.startswith(EVALUATION_FIXTURE_PREFIX)
     is_action = lower_path.startswith(".github/actions/") and name in (
         "action.yml", "action.yaml")
     if (lower_path.startswith(".github/workflows/") and is_yaml) or is_action:
@@ -596,7 +598,9 @@ def _scan_blob(
             checkers["check_persist_credentials"].find_violations(text, path))
         violations.extend(_workflow_violations(
             text, path, checkers["check_persist_credentials"]))
-    if Path(lower_path).suffix in CODE_SUFFIXES:
+    # Evaluation fixtures intentionally contain vulnerable code for model tests.
+    # The evaluator checks those files separately from production compliance.
+    if Path(lower_path).suffix in CODE_SUFFIXES and not is_evaluation_fixture:
         violations.extend(
             checkers["check_weak_hashing"].find_violations(text, path))
     is_dockerfile = name in ("dockerfile", "containerfile") or name.startswith(

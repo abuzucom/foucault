@@ -6,6 +6,58 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.1.4] (2026-09-15)
+
+### Fixed
+
+- Kept intentional weak-hash evaluator fixtures available for model review.
+- Preserved weak-hash enforcement for production code.
+
+## [3.1.3] (2026-09-15)
+
+### Fixed
+
+- Preserved the intentional weak-hash evaluator fixture.
+- Resolved workflow-run pull requests through the GitHub API by head SHA.
+- Removed bearer headers from pull request head fetches.
+
+## [3.1.2] (2026-09-15)
+
+### Fixed
+
+- Made the adapter path test portable across Windows and Linux runners.
+
+## [3.1.1] (2026-09-15)
+
+### Fixed
+
+- Started PR model review from the trusted workflow-run path.
+- Kept immutable compliance compatible with the review workflow trigger.
+- Made the model command test portable across Python executable names.
+- Marked the intentional weak-hash evaluator fixture for checker review.
+
+## [3.1.0] (2026-09-15)
+
+### Added
+
+- Automatic same-repository pull request security review triggers.
+- Ollama, OpenAI-compatible, Anthropic, and Google provider adapters.
+- Reviewed provider configuration and exact endpoint allowlisting.
+- Shell-free model command execution and report validation.
+- Fork pull request skip handling without provider secret exposure.
+- Bounded provider retries, input sizes, output sizes, and response parsing.
+- PR security review architecture and provider setup documentation.
+
+### Security
+
+- Prevented pull request content from reaching shell syntax or dynamic URLs.
+- Preserved base-only workflow execution and fail-closed verdict handling.
+
+### Documentation
+
+- Documented model request formats, provider secrets, data transfer, local
+  testing, failure behavior, and performance safeguards.
+
 ## [3.0.2] (2026-09-14)
 
 ### Fixed

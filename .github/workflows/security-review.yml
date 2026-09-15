@@ -1,7 +1,8 @@
 name: security-review
 
 # Reusable workflow that runs AUDIT.md against a pull request diff and
-# posts the result. Adopt with:
+# posts the result. The local PR caller supplies the provider key and
+# adapter command. Adopt with:
 #
 #   jobs:
 #     security-review:
@@ -10,21 +11,19 @@ name: security-review
 #         audit_ref: "<the same full-commit-sha>"
 #         model_call_command: "python ci/call_model.py"
 #       secrets:
-#         MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
+#         MODEL_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
 #
 # Pass only the credential model_call_command needs. Never use
-# `secrets: inherit`: this job runs a model over an untrusted pull request
-# diff, and inherit hands it every secret the calling repository holds.
+# inherited secrets: this job runs a model over an untrusted pull request
+# diff, and inherited secrets hand it every secret the calling repository holds.
 #
 # Pin both `uses:` and `audit_ref` to the same full commit SHA (never a tag
 # or branch). Record the release version in a comment beside the pin.
 #
-# foucault ships no model credential and no provider lock-in. `model_call_command`
-# is a shell command supplied by the adopting repository: it reads the
-# system prompt from the file named by $AUDIT_PROMPT_FILE and the case text
-# (PR title, body, and diff) from the file named by $CASE_TEXT_FILE, then
-# writes the model's raw text response to stdout. Wire it to whichever
-# provider and model that repository's deployment of AUDIT.md uses.
+# `model_call_command` remains a public input for adopter compatibility. The
+# workflow passes it to a shell-free validator. The default adapter reads the
+# system prompt from $AUDIT_PROMPT_FILE and the case text from
+# $CASE_TEXT_FILE, then writes the model response to stdout.
 
 on:
   workflow_call:
@@ -47,6 +46,30 @@ on:
         required: false
         type: boolean
         default: true
+      pr_number:
+        description: "Resolved pull request number for workflow_run callers."
+        required: false
+        type: string
+      base_sha:
+        description: "Resolved pull request base SHA for workflow_run callers."
+        required: false
+        type: string
+      head_sha:
+        description: "Resolved pull request head SHA for workflow_run callers."
+        required: false
+        type: string
+      head_repo_url:
+        description: "Resolved pull request head repository URL for workflow_run callers."
+        required: false
+        type: string
+      head_repo_full_name:
+        description: "Resolved pull request head repository name for workflow_run callers."
+        required: false
+        type: string
+    secrets:
+      MODEL_API_KEY:
+        description: "Provider API key for the selected trusted adapter."
+        required: true
 
 jobs:
   review:
@@ -55,9 +78,114 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      - name: Resolve pull request metadata
+        id: resolve
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+          INPUT_BASE_SHA: ${{ inputs.base_sha }}
+          INPUT_HEAD_SHA: ${{ inputs.head_sha }}
+          INPUT_HEAD_REPO_URL: ${{ inputs.head_repo_url }}
+          INPUT_HEAD_REPO_FULL_NAME: ${{ inputs.head_repo_full_name }}
+        with:
+          script: |
+            const shaPattern = /^[0-9a-f]{40}$/;
+            const repositoryPattern = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+            const inputValues = [
+              process.env.INPUT_PR_NUMBER,
+              process.env.INPUT_BASE_SHA,
+              process.env.INPUT_HEAD_SHA,
+              process.env.INPUT_HEAD_REPO_URL,
+              process.env.INPUT_HEAD_REPO_FULL_NAME,
+            ];
+
+            const emitMetadata = (number, baseSha, headSha, repoUrl, repoName) => {
+              if (!/^[1-9][0-9]*$/.test(String(number))) {
+                throw new Error("pull request number is invalid");
+              }
+              if (!shaPattern.test(baseSha) || !shaPattern.test(headSha)) {
+                throw new Error("pull request revisions are invalid");
+              }
+              if (!repositoryPattern.test(repoName)) {
+                throw new Error("pull request repository is invalid");
+              }
+              if (!repoUrl || !repoUrl.startsWith("https://github.com/")) {
+                throw new Error("pull request repository URL is invalid");
+              }
+              core.setOutput("pr_number", String(number));
+              core.setOutput("base_sha", baseSha);
+              core.setOutput("head_sha", headSha);
+              core.setOutput("head_repo_url", repoUrl);
+              core.setOutput("head_repo_full_name", repoName);
+            };
+
+            try {
+              if (inputValues.some((value) => value)) {
+                if (inputValues.some((value) => !value)) {
+                  throw new Error("resolved pull request metadata is incomplete");
+                }
+                emitMetadata(
+                  process.env.INPUT_PR_NUMBER,
+                  process.env.INPUT_BASE_SHA,
+                  process.env.INPUT_HEAD_SHA,
+                  process.env.INPUT_HEAD_REPO_URL,
+                  process.env.INPUT_HEAD_REPO_FULL_NAME,
+                );
+                return;
+              }
+
+              const directPullRequest = context.payload.pull_request;
+              if (directPullRequest) {
+                emitMetadata(
+                  directPullRequest.number,
+                  directPullRequest.base?.sha,
+                  directPullRequest.head?.sha,
+                  directPullRequest.head?.repo?.clone_url,
+                  directPullRequest.head?.repo?.full_name,
+                );
+                return;
+              }
+
+              const headSha = context.payload.workflow_run?.head_sha;
+              if (!shaPattern.test(headSha || "")) {
+                throw new Error("workflow run head SHA is invalid");
+              }
+              const pullRequests = await github.paginate(
+                github.rest.repos.listPullRequestsAssociatedWithCommit,
+                {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  commit_sha: headSha,
+                  per_page: 100,
+                },
+              );
+              const baseRepository = `${context.repo.owner}/${context.repo.repo}`;
+              const candidates = pullRequests.filter((pullRequest) =>
+                pullRequest.base?.repo?.full_name?.toLowerCase() ===
+                baseRepository.toLowerCase() &&
+                pullRequest.head?.sha?.toLowerCase() === headSha.toLowerCase()
+              );
+              if (candidates.length !== 1) {
+                throw new Error(
+                  `expected one pull request for workflow run head, found ${candidates.length}`,
+                );
+              }
+              const pullRequest = candidates[0];
+              emitMetadata(
+                pullRequest.number,
+                pullRequest.base?.sha,
+                pullRequest.head?.sha,
+                pullRequest.head?.repo?.clone_url,
+                pullRequest.head?.repo?.full_name,
+              );
+            } catch (error) {
+              core.setFailed(error.message);
+            }
+
       - name: Checkout pull request
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          ref: ${{ steps.resolve.outputs.base_sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -69,46 +197,53 @@ jobs:
           path: .foucault
           persist-credentials: false
 
-      - name: Build provenance-labeled case text
+      - name: Fetch pull request head object
         env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_REPO_URL: ${{ steps.resolve.outputs.head_repo_url }}
+          HEAD_REPO_FULL_NAME: ${{ steps.resolve.outputs.head_repo_full_name }}
+          BASE_REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          import hashlib
-          import json
+          python3 - "$PR_HEAD_REPO_URL" "$HEAD_REPO_FULL_NAME" "$BASE_REPOSITORY" "$HEAD_SHA" <<'PY'
           import os
+          import re
           import subprocess
+          import sys
+          from urllib.parse import urlsplit
 
-          def digest(text):
-              return hashlib.sha256(text.replace("\r\n", "\n").encode()).hexdigest()
-
-          diff = subprocess.run(
-              ["git", "diff", os.environ["BASE_SHA"], os.environ["HEAD_SHA"]],
+          repository_url, head_repository, base_repository, head_sha = sys.argv[1:]
+          parsed = urlsplit(repository_url)
+          if parsed.scheme != "https" or parsed.hostname != "github.com":
+              raise SystemExit("PR head repository URL is not an approved GitHub URL")
+          if (
+              parsed.query
+              or parsed.fragment
+              or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", head_repository)
+              or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", base_repository)
+              or not re.fullmatch(r"[0-9a-f]{40}", head_sha)
+          ):
+              raise SystemExit("PR head metadata is invalid")
+          fetch_source = (
+              "origin"
+              if head_repository.casefold() == base_repository.casefold()
+              else repository_url
+          )
+          subprocess.run(
+              ["git", "fetch", "--no-tags", "--depth=1", fetch_source, head_sha],
               check=True,
-              capture_output=True,
-              text=True,
-          ).stdout
-          target = "Title: " + os.environ["PR_TITLE"] + "\n\n"
-          target += os.environ.get("PR_BODY", "") + "\n\n---\n" + diff
-          envelope = {
-              "mode": "PR",
-              "TRUSTED_HOOK_CONTEXT": {
-                  "read_only": True,
-                  "sha256": digest(""),
-                  "text": "",
-              },
-              "REVIEW_TARGET": {
-                  "sha256": digest(target),
-                  "text": target,
-              },
-          }
-          with open("case_text.txt", "w", encoding="utf-8", newline="\n") as output:
-              json.dump(envelope, output, ensure_ascii=True, sort_keys=True)
+          )
           PY
+
+      - name: Build provenance-labeled case text
+        env:
+          EVENT_PATH: ${{ github.event_path }}
+          BASE_SHA: ${{ steps.resolve.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
+          PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}
+          PR_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 ci/build_pr_case.py
 
       - name: Run model call
         id: model
@@ -116,9 +251,13 @@ jobs:
           AUDIT_PROMPT_FILE: .foucault/AUDIT.md
           CASE_TEXT_FILE: case_text.txt
           MODEL_CALL_COMMAND: ${{ inputs.model_call_command }}
+          MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
         run: |
           set -euo pipefail
-          eval "$MODEL_CALL_COMMAND" > response.txt
+          python3 ci/run_model_command.py "$MODEL_CALL_COMMAND" > response.txt
+
+      - name: Validate report structure
+        run: python3 scripts/check_pr_review_response.py response.txt
 
       - name: Parse verdict
         id: verdict
