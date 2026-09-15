@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.1.1] (2026-09-15)
+
+### Fixed
+
+- Started PR model review from the trusted workflow-run path.
+- Kept immutable compliance compatible with the review workflow trigger.
+- Made the model command test portable across Python executable names.
+- Marked the intentional weak-hash evaluator fixture for checker review.
+
 ## [3.1.0] (2026-09-15)
 
 ### Added

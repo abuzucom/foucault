@@ -11,6 +11,7 @@ from scripts.check_pr_review_response import ResponseError, validate_response
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REVIEW_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "security-review.yml"
 CALLER_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "security-review-pr.yml"
+IMMUTABLE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "immutable-conflict-check.yml"
 
 
 class ResponseValidationTest(unittest.TestCase):
@@ -52,6 +53,7 @@ class WorkflowWiringTest(unittest.TestCase):
     def setUp(self):
         self.review = REVIEW_WORKFLOW.read_text(encoding="utf-8")
         self.caller = CALLER_WORKFLOW.read_text(encoding="utf-8")
+        self.immutable = IMMUTABLE_WORKFLOW.read_text(encoding="utf-8")
 
     def test_caller_covers_pr_events_and_forks(self):
         for event in (
@@ -62,8 +64,10 @@ class WorkflowWiringTest(unittest.TestCase):
             "ready_for_review",
             "converted_to_draft",
         ):
-            self.assertIn(event, self.caller)
-        self.assertIn("pull_request_target", self.caller)
+            self.assertIn(event, self.immutable)
+        self.assertIn("workflow_run", self.caller)
+        self.assertIn("Immutable Compliance", self.caller)
+        self.assertIn("types: [completed]", self.caller)
         self.assertIn("fork-review-skipped", self.caller)
         self.assertIn("head.repo.full_name == github.repository", self.caller)
         self.assertIn("head.repo.full_name != github.repository", self.caller)

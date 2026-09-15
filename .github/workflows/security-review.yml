@@ -61,7 +61,7 @@ jobs:
       - name: Checkout pull request
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.pull_request.base.sha || github.event.workflow_run.pull_requests[0].base.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -75,8 +75,8 @@ jobs:
 
       - name: Fetch pull request head object
         env:
-          PR_HEAD_REPO_URL: ${{ github.event.pull_request.head.repo.clone_url }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_REPO_URL: ${{ github.event.pull_request.head.repo.clone_url || github.event.workflow_run.pull_requests[0].head.repo.clone_url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
@@ -109,50 +109,12 @@ jobs:
       - name: Build provenance-labeled case text
         env:
           EVENT_PATH: ${{ github.event_path }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import hashlib
-          import json
-          import os
-          import re
-          import subprocess
-
-          event = json.loads(open(os.environ["EVENT_PATH"], encoding="utf-8").read())
-          pull_request = event["pull_request"]
-          for revision_name in ("BASE_SHA", "HEAD_SHA"):
-              if not re.fullmatch(r"[0-9a-f]{40}", os.environ[revision_name]):
-                  raise SystemExit(f"{revision_name} is not a full commit SHA")
-
-          def digest(text):
-              return hashlib.sha256(text.replace("\r\n", "\n").encode()).hexdigest()
-
-          diff = subprocess.run(
-              ["git", "diff", os.environ["BASE_SHA"], os.environ["HEAD_SHA"]],
-              check=True,
-              capture_output=True,
-              text=True,
-          ).stdout
-          target = "Title: " + pull_request["title"] + "\n\n"
-          target += pull_request.get("body") or ""
-          target += "\n\n---\n" + diff
-          envelope = {
-              "mode": "PR",
-              "TRUSTED_HOOK_CONTEXT": {
-                  "read_only": True,
-                  "sha256": digest(""),
-                  "text": "",
-              },
-              "REVIEW_TARGET": {
-                  "sha256": digest(target),
-                  "text": target,
-              },
-          }
-          with open("case_text.txt", "w", encoding="utf-8", newline="\n") as output:
-              json.dump(envelope, output, ensure_ascii=True, sort_keys=True)
-          PY
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.workflow_run.pull_requests[0].base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number }}
+          PR_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 ci/build_pr_case.py
 
       - name: Run model call
         id: model

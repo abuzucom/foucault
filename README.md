@@ -41,10 +41,11 @@ with a new or updated case.
 ## CI Integration
 
 [`security-review-pr.yml`](.github/workflows/security-review-pr.yml) invokes
-the reusable workflow for same-repository pull requests. The workflow reads
-the base revision, fetches the pull request head without checking it out, and
-builds one provenance-labeled review envelope. Fork pull requests receive an
-explicit skip result because provider secrets are unavailable to them.
+the reusable workflow after the trusted immutable compliance workflow
+completes. The workflow reads the base revision, fetches the pull request head
+without checking it out, and builds one provenance-labeled review envelope.
+Fork pull requests receive an explicit skip result because provider secrets
+are unavailable to them.
 
 [`security-review.yml`](.github/workflows/security-review.yml) loads the
 immutable `AUDIT.md` revision, calls the configured provider adapter, posts a

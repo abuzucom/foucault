@@ -2,6 +2,7 @@
 """Tests for the provider adapter and shell-free command runner."""
 
 import json
+import sys
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -78,7 +79,7 @@ class CommandValidationTest(unittest.TestCase):
 
     def test_python_script_command_becomes_an_argument_array(self):
         arguments = run_model_command.parse_command("python3 ci/call_model.py")
-        self.assertEqual(Path(arguments[0]).stem, "python")
+        self.assertEqual(arguments[0], sys.executable)
         self.assertTrue(arguments[1].endswith("ci\\call_model.py"))
 
     def test_shell_syntax_is_rejected(self):

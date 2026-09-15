@@ -32,10 +32,11 @@ review context to one allowlisted provider. The provider key stays in a
 GitHub secret. The workflow maps that key to `MODEL_API_KEY` and passes it
 only to the adapter process.
 
-The trusted caller runs on `pull_request_target`. It uses workflow code from
-the base revision. It fetches the pull request head for diff inspection. It
-never checks out or executes pull request files. Fork pull requests receive a
-skip result and no provider key.
+The trusted caller runs on `workflow_run` after the immutable compliance
+workflow. GitHub loads the caller from the default branch. The reusable
+workflow checks out the base revision. It fetches the pull request head for
+diff inspection. It never executes pull request files. Fork pull requests
+receive a skip result and no provider key.
 
 The adapter serializes all provider requests as JSON. It uses argument arrays
 for subprocess calls. It rejects shell syntax, unknown providers, unapproved
