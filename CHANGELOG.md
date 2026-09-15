@@ -14,6 +14,10 @@ loading `AUDIT.md` into a deployment.
   command diagnostics.
 - Reconciled secure Git delivery guidance with `abuzucom/agents` main at
   `ad632c4`.
+- Documented the end-to-end wrapper audit, retained local protections, and
+  final-argument gate evaluation.
+- Refreshed the upstream drift manifest after the reconciliation so CI checks
+  all locally adapted files at their current normalized hashes.
 
 ## [3.1.4] (2026-09-15)
 
