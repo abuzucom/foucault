@@ -10,17 +10,17 @@ report with a machine-readable verdict. The workflow fails on `BLOCK` or
 
 1. GitHub starts `immutable-conflict-check.yml` for the pull request event.
 2. GitHub starts `security-review-pr.yml` after that workflow completes.
-3. The trusted workflow-run caller checks whether the head repository matches
-   the base repository.
-4. A same-repository pull request calls `security-review.yml`.
-5. A fork pull request runs the fork skip job. The skip job receives no secret.
-6. The reusable workflow checks out the base commit.
-7. The workflow fetches the head object without checking it out.
-8. One diff and one review envelope are created.
-9. `ci/run_model_command.py` validates the adapter command without a shell.
-10. `ci/call_model.py` sends one request to the active provider.
-11. The workflow validates the report and posts a fenced comment.
-12. The final verdict controls the check result.
+3. The trusted workflow-run caller resolves the pull request from `head_sha`.
+4. The caller checks whether the head repository matches the base repository.
+5. A same-repository pull request calls `security-review.yml`.
+6. A fork pull request runs the fork skip job. The skip job receives no secret.
+7. The reusable workflow checks out the base commit.
+8. The workflow fetches the head object without checking it out.
+9. One diff and one review envelope are created.
+10. `ci/run_model_command.py` validates the adapter command without a shell.
+11. `ci/call_model.py` sends one request to the active provider.
+12. The workflow validates the report and posts a fenced comment.
+13. The final verdict controls the check result.
 
 ## Trust boundary
 
@@ -30,9 +30,10 @@ The workflow-run caller runs with default-branch code. Pull request files
 remain review data. The workflow never executes a pull request file. The
 workflow does not place title, body, filename, or diff content in shell syntax.
 
-The workflow-run event supplies the pull request number and revisions. The
-trusted GitHub API supplies the current title and body. The API request uses a
-validated repository name and numeric pull request number.
+The workflow-run event supplies the head revision. The trusted GitHub API
+resolves one matching pull request and supplies its number and revisions. The
+API request uses the base repository and validated head revision. The
+workflow passes the resolved metadata into the reusable workflow.
 
 The review envelope keeps `TRUSTED_HOOK_CONTEXT` separate from
 `REVIEW_TARGET`. Trusted context cannot support a finding. Findings require a

@@ -46,6 +46,26 @@ on:
         required: false
         type: boolean
         default: true
+      pr_number:
+        description: "Resolved pull request number for workflow_run callers."
+        required: false
+        type: string
+      base_sha:
+        description: "Resolved pull request base SHA for workflow_run callers."
+        required: false
+        type: string
+      head_sha:
+        description: "Resolved pull request head SHA for workflow_run callers."
+        required: false
+        type: string
+      head_repo_url:
+        description: "Resolved pull request head repository URL for workflow_run callers."
+        required: false
+        type: string
+      head_repo_full_name:
+        description: "Resolved pull request head repository name for workflow_run callers."
+        required: false
+        type: string
     secrets:
       MODEL_API_KEY:
         description: "Provider API key for the selected trusted adapter."
@@ -58,10 +78,114 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      - name: Resolve pull request metadata
+        id: resolve
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+          INPUT_BASE_SHA: ${{ inputs.base_sha }}
+          INPUT_HEAD_SHA: ${{ inputs.head_sha }}
+          INPUT_HEAD_REPO_URL: ${{ inputs.head_repo_url }}
+          INPUT_HEAD_REPO_FULL_NAME: ${{ inputs.head_repo_full_name }}
+        with:
+          script: |
+            const shaPattern = /^[0-9a-f]{40}$/;
+            const repositoryPattern = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+            const inputValues = [
+              process.env.INPUT_PR_NUMBER,
+              process.env.INPUT_BASE_SHA,
+              process.env.INPUT_HEAD_SHA,
+              process.env.INPUT_HEAD_REPO_URL,
+              process.env.INPUT_HEAD_REPO_FULL_NAME,
+            ];
+
+            const emitMetadata = (number, baseSha, headSha, repoUrl, repoName) => {
+              if (!/^[1-9][0-9]*$/.test(String(number))) {
+                throw new Error("pull request number is invalid");
+              }
+              if (!shaPattern.test(baseSha) || !shaPattern.test(headSha)) {
+                throw new Error("pull request revisions are invalid");
+              }
+              if (!repositoryPattern.test(repoName)) {
+                throw new Error("pull request repository is invalid");
+              }
+              if (!repoUrl || !repoUrl.startsWith("https://github.com/")) {
+                throw new Error("pull request repository URL is invalid");
+              }
+              core.setOutput("pr_number", String(number));
+              core.setOutput("base_sha", baseSha);
+              core.setOutput("head_sha", headSha);
+              core.setOutput("head_repo_url", repoUrl);
+              core.setOutput("head_repo_full_name", repoName);
+            };
+
+            try {
+              if (inputValues.some((value) => value)) {
+                if (inputValues.some((value) => !value)) {
+                  throw new Error("resolved pull request metadata is incomplete");
+                }
+                emitMetadata(
+                  process.env.INPUT_PR_NUMBER,
+                  process.env.INPUT_BASE_SHA,
+                  process.env.INPUT_HEAD_SHA,
+                  process.env.INPUT_HEAD_REPO_URL,
+                  process.env.INPUT_HEAD_REPO_FULL_NAME,
+                );
+                return;
+              }
+
+              const directPullRequest = context.payload.pull_request;
+              if (directPullRequest) {
+                emitMetadata(
+                  directPullRequest.number,
+                  directPullRequest.base?.sha,
+                  directPullRequest.head?.sha,
+                  directPullRequest.head?.repo?.clone_url,
+                  directPullRequest.head?.repo?.full_name,
+                );
+                return;
+              }
+
+              const headSha = context.payload.workflow_run?.head_sha;
+              if (!shaPattern.test(headSha || "")) {
+                throw new Error("workflow run head SHA is invalid");
+              }
+              const pullRequests = await github.paginate(
+                github.rest.repos.listPullRequestsAssociatedWithCommit,
+                {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  commit_sha: headSha,
+                  per_page: 100,
+                },
+              );
+              const baseRepository = `${context.repo.owner}/${context.repo.repo}`;
+              const candidates = pullRequests.filter((pullRequest) =>
+                pullRequest.base?.repo?.full_name?.toLowerCase() ===
+                baseRepository.toLowerCase() &&
+                pullRequest.head?.sha?.toLowerCase() === headSha.toLowerCase()
+              );
+              if (candidates.length !== 1) {
+                throw new Error(
+                  `expected one pull request for workflow run head, found ${candidates.length}`,
+                );
+              }
+              const pullRequest = candidates[0];
+              emitMetadata(
+                pullRequest.number,
+                pullRequest.base?.sha,
+                pullRequest.head?.sha,
+                pullRequest.head?.repo?.clone_url,
+                pullRequest.head?.repo?.full_name,
+              );
+            } catch (error) {
+              core.setFailed(error.message);
+            }
+
       - name: Checkout pull request
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: ${{ github.event.pull_request.base.sha || github.event.workflow_run.pull_requests[0].base.sha }}
+          ref: ${{ steps.resolve.outputs.base_sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -75,43 +199,48 @@ jobs:
 
       - name: Fetch pull request head object
         env:
-          PR_HEAD_REPO_URL: ${{ github.event.pull_request.head.repo.clone_url || github.event.workflow_run.pull_requests[0].head.repo.clone_url }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha }}
-          GH_TOKEN: ${{ github.token }}
+          PR_HEAD_REPO_URL: ${{ steps.resolve.outputs.head_repo_url }}
+          HEAD_REPO_FULL_NAME: ${{ steps.resolve.outputs.head_repo_full_name }}
+          BASE_REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
         run: |
           set -euo pipefail
-          python3 - "$PR_HEAD_REPO_URL" "$HEAD_SHA" <<'PY'
+          python3 - "$PR_HEAD_REPO_URL" "$HEAD_REPO_FULL_NAME" "$BASE_REPOSITORY" "$HEAD_SHA" <<'PY'
           import os
           import re
           import subprocess
           import sys
           from urllib.parse import urlsplit
 
-          repository_url, head_sha = sys.argv[1:]
+          repository_url, head_repository, base_repository, head_sha = sys.argv[1:]
           parsed = urlsplit(repository_url)
           if parsed.scheme != "https" or parsed.hostname != "github.com":
               raise SystemExit("PR head repository URL is not an approved GitHub URL")
-          if parsed.query or parsed.fragment or not re.fullmatch(r"[0-9a-f]{40}", head_sha):
+          if (
+              parsed.query
+              or parsed.fragment
+              or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", head_repository)
+              or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", base_repository)
+              or not re.fullmatch(r"[0-9a-f]{40}", head_sha)
+          ):
               raise SystemExit("PR head metadata is invalid")
-          fetch_env = os.environ.copy()
-          fetch_env["GIT_CONFIG_COUNT"] = "1"
-          fetch_env["GIT_CONFIG_KEY_0"] = "http.extraheader"
-          fetch_env["GIT_CONFIG_VALUE_0"] = (
-              "AUTHORIZATION: bearer " + fetch_env["GH_TOKEN"]
+          fetch_source = (
+              "origin"
+              if head_repository.casefold() == base_repository.casefold()
+              else repository_url
           )
           subprocess.run(
-              ["git", "fetch", "--no-tags", "--depth=1", repository_url, head_sha],
+              ["git", "fetch", "--no-tags", "--depth=1", fetch_source, head_sha],
               check=True,
-              env=fetch_env,
           )
           PY
 
       - name: Build provenance-labeled case text
         env:
           EVENT_PATH: ${{ github.event_path }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.workflow_run.pull_requests[0].base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha }}
-          PR_NUMBER: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number }}
+          BASE_SHA: ${{ steps.resolve.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
+          PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}
           PR_REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
         run: python3 ci/build_pr_case.py

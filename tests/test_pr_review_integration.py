@@ -69,8 +69,34 @@ class WorkflowWiringTest(unittest.TestCase):
         self.assertIn("Immutable Compliance", self.caller)
         self.assertIn("types: [completed]", self.caller)
         self.assertIn("fork-review-skipped", self.caller)
-        self.assertIn("head.repo.full_name == github.repository", self.caller)
-        self.assertIn("head.repo.full_name != github.repository", self.caller)
+        self.assertIn("listPullRequestsAssociatedWithCommit", self.caller)
+        self.assertIn("workflowRun?.head_sha", self.caller)
+        self.assertIn("same_repository", self.caller)
+        self.assertNotIn("workflow_run.pull_requests[0]", self.caller)
+        self.assertNotIn("workflow_run.pull_requests[0]", self.review)
+
+    def test_workflow_run_metadata_reaches_reusable_workflow(self):
+        for input_name in (
+            "pr_number",
+            "base_sha",
+            "head_sha",
+            "head_repo_url",
+            "head_repo_full_name",
+        ):
+            self.assertIn(f"{input_name}:", self.caller)
+            self.assertIn(f"{input_name}:", self.review)
+
+    def test_head_fetch_does_not_forward_global_bearer_header(self):
+        self.assertIn('"origin"', self.review)
+        self.assertNotIn("GIT_CONFIG_KEY_0", self.review)
+        self.assertNotIn("http.extraheader", self.review)
+
+    def test_weak_hash_fixture_keeps_the_intentional_finding(self):
+        fixture = (
+            REPO_ROOT / "eval" / "cases" / "weak-hash-password-file" / "input.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("hashlib.md5", fixture)
+        self.assertNotIn("non-security fixture", fixture)
 
     def test_workflow_declares_one_provider_secret(self):
         self.assertIn("MODEL_API_KEY:", self.review)

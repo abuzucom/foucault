@@ -68,10 +68,9 @@ def _get_pull_request(event: dict[str, object]) -> dict[str, object]:
     if isinstance(pull_request, dict):
         return pull_request
     workflow_run = event.get("workflow_run")
-    related = workflow_run.get("pull_requests") if isinstance(workflow_run, dict) else None
-    if not isinstance(related, list) or not related:
-        raise RuntimeError("workflow run has no pull request metadata")
-    return _read_pull_request_from_api()
+    if isinstance(workflow_run, dict):
+        return _read_pull_request_from_api()
+    raise RuntimeError("event has no pull request metadata")
 
 
 def _digest(text: str) -> str:
