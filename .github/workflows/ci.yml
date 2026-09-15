@@ -106,6 +106,12 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python3 scripts/check_changelog.py --base "$BASE_SHA" --head "$HEAD_SHA"
 
+      - name: Test-first executable changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/check_test_first.py --base "$BASE_SHA" --head "$HEAD_SHA"
+
       - name: Eval corpus
         # Structure only. This repository ships no model credential, and
         # --model-call resolves to an importable module and executes its code,

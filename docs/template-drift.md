@@ -2,7 +2,7 @@
 
 `abuzucom/agents` is the upstream source for the adopted agent policy and
 enforcement bundle. This repository adopts commit
-`7de83d04224784774dcfd1a21462bf23315bdeae`, released upstream as 2.0.20.
+`e1408dcfae9c8c714e8522d8236b58b6345ef2ba`, released upstream as 2.0.20.
 
 ## Adopted
 
@@ -23,10 +23,15 @@ enforcement bundle. This repository adopts commit
 - `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, and
   `docs/gate-threat-model.md` describe this repository's product and CI.
 - `scripts/trusted_gh.py` preserves Foucault's bounded diagnostics and token
-  output denial while adopting current upstream routing behavior.
+  output denial while adopting current upstream repository-context routing.
 - `scripts/check_gate_adoption.py` validates all four client configurations.
 - `.github/workflows/ci.yml` combines upstream checks with Foucault's eval and
   security-review jobs.
+- `.github/workflows/ci.yml` and `.pre-commit-config.yaml` adapt the upstream
+  test-first checker to the existing local workflow.
+- `README.md`, `docs/agent-policy/enforcement.md`, and
+  `docs/agent-policy/github.md` describe runtime approval and test-first
+  boundaries for the newer upstream contract.
 - Existing evaluator, delivery, workflow, and trusted GitHub tests remain
   alongside the upstream gate tests.
 
@@ -36,6 +41,8 @@ enforcement bundle. This repository adopts commit
 - Upstream source-repository adopter records and example security documents.
 - Upstream reusable compliance workflow files. Their checks are integrated
   into this repository's existing CI.
+- Upstream `sync-check.yml`. Its new test-first step is integrated into the
+  existing local CI and pre-commit configuration.
 - The upstream project's own README, changelog, license, and project-only
   examples.
 

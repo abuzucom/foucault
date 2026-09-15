@@ -2622,7 +2622,7 @@ GH_SUBCOMMAND_VALUE_OPTIONS = frozenset({
 })
 GH_COMMAND_VALUE_OPTIONS = (GH_GLOBAL_VALUE_OPTIONS
                             | GH_SUBCOMMAND_VALUE_OPTIONS
-                            | frozenset({"-h", "-u"}))
+                            | frozenset({"-h", "-s", "-u", "--scopes"}))
 GH_BROAD_AUTH_SCOPES = frozenset({"admin:org", "admin:public_key",
                                   "admin:repo_hook", "delete_repo", "gist",
                                   "project", "repo", "user", "workflow",

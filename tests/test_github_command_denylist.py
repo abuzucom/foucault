@@ -46,6 +46,8 @@ class GithubCommandDenylistTest(unittest.TestCase):
             ["auth", "--hostname", "github.example", "token"],
             ["auth", "-h", "github.example", "token"],
             ["auth", "-u", "octocat", "token"],
+            ["auth", "-s", "read:org", "token"],
+            ["auth", "--scopes", "read:org", "login"],
             ["repo", "--repo", "OWNER/REPO", "clone", "OWNER/REPO"],
         )
         for command in cases:

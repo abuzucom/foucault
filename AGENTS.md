@@ -47,6 +47,10 @@ gate overrides general execution authorization. Each gated act requires
 confirmation immediately before execution. Consent applies only to the named
 act and target.
 
+Never claim elevated or external execution without runtime approval. Label
+requests pending. Label approved execution only after approval. Report
+rejection as rejection. Treat ordinary sandbox execution as ordinary.
+
 ### Precedence
 
 Apply rules in this order when requirements conflict:
@@ -61,10 +65,10 @@ under higher-priority rules.
 ## Foucault product rules
 
 1. Never embed a real credential. Fixtures may use fresh synthetic values that
-   cannot access a service. Mark them synthetic in `expected.json`. Use
-   low-entropy placeholders for false-positive cases.
+   cannot access services. Mark them synthetic in `expected.json`. Use
+   low-entropy placeholders for false positives.
 2. Never weaken, skip, or delete an `eval/cases/` entry to pass evaluation.
-   Stop for an active-human decision when a case appears defective.
+   Stop for an active-human decision on apparent defects.
 3. Add an `eval/cases/` entry for each `AUDIT.md` change affecting a verdict,
    hard blocker, or severity mapping.
 4. Keep `AUDIT.md` below 32768 characters. Tie each rule to an exploit.
@@ -74,8 +78,8 @@ under higher-priority rules.
    claim live-model coverage without a configured adapter.
 7. Preserve `security-review.yml` inputs and the evaluator JSON envelope. Pin
    production policy loading to an immutable revision.
-8. Verify checkout, branch, commit, remote ref, result, PR number, and draft
-   status before delivery claims.
+8. Verify checkout, branch, commit, remote ref, result, PR, and draft status
+   before delivery claims.
 
 ## Banned agents
 

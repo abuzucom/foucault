@@ -7,6 +7,12 @@ repos:
         language: python
         pass_filenames: false
         always_run: true
+      - id: check-test-first
+        name: Check test-first executable changes
+        entry: python scripts/check_test_first.py
+        language: python
+        pass_filenames: false
+        always_run: true
       - id: check-policy-size
         name: Check canonical policy size
         entry: python scripts/check_policy_size.py

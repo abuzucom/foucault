@@ -103,6 +103,15 @@ The adoption uses `scripts/sync.py` for policy copies and
 size, synchronization, gate completeness, launcher startup, hook coverage,
 workflow safety, attribution, and immutable compliance.
 
+The trusted GitHub wrapper supplies validated repository context from the
+local checkout or worktree. The wrapper fails closed when context is missing
+or unsafe. Pull request creation receives a validated head context when no
+head option exists. Windows, macOS, and Linux worktree layouts are supported.
+
+Agents must not claim elevated or external execution without a runtime approval
+result. Repository hooks enforce observable command gates. An external harness
+must enforce client output claims when the client API hides them.
+
 ## Contributing
 
 Every repository action requires an active-user request. Do not run Git commands before consent.

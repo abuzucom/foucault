@@ -29,6 +29,15 @@ Run:
 The checks cover only observed files, commands, clients, and event surfaces.
 External controls must enforce controls beyond repository coverage.
 
+Hooks must not label execution as elevated without a client runtime approval
+result. Missing or contradictory approval metadata fails closed. Repository
+hooks cannot inspect client prose when the client API hides it. An external
+harness must enforce those claims.
+
+Executable changes require a behavioral test. The test-first checker examines
+changed pull request paths and staged paths. Documentation-only changes remain
+outside that check.
+
 The complete adoption inventory and recovery procedure cover every hook,
 registration, shared module, test, checker, manifest, policy file, and
 synchronized copy. A designed-denial defect report includes the exact input,

@@ -47,6 +47,10 @@ gate overrides general execution authorization. Each gated act requires
 confirmation immediately before execution. Consent applies only to the named
 act and target.
 
+Never claim elevated or external execution without runtime approval. Label
+requests pending. Label approved execution only after approval. Report
+rejection as rejection. Treat ordinary sandbox execution as ordinary.
+
 ### Precedence
 
 Apply rules in this order when requirements conflict:
@@ -61,10 +65,10 @@ under higher-priority rules.
 ## Foucault product rules
 
 1. Never embed a real credential. Fixtures may use fresh synthetic values that
-   cannot access a service. Mark them synthetic in `expected.json`. Use
-   low-entropy placeholders for false-positive cases.
+   cannot access services. Mark them synthetic in `expected.json`. Use
+   low-entropy placeholders for false positives.
 2. Never weaken, skip, or delete an `eval/cases/` entry to pass evaluation.
-   Stop for an active-human decision when a case appears defective.
+   Stop for an active-human decision on apparent defects.
 3. Add an `eval/cases/` entry for each `AUDIT.md` change affecting a verdict,
    hard blocker, or severity mapping.
 4. Keep `AUDIT.md` below 32768 characters. Tie each rule to an exploit.
@@ -74,8 +78,8 @@ under higher-priority rules.
    claim live-model coverage without a configured adapter.
 7. Preserve `security-review.yml` inputs and the evaluator JSON envelope. Pin
    production policy loading to an immutable revision.
-8. Verify checkout, branch, commit, remote ref, result, PR number, and draft
-   status before delivery claims.
+8. Verify checkout, branch, commit, remote ref, result, PR, and draft status
+   before delivery claims.
 
 ## Banned agents
 
@@ -889,6 +893,15 @@ Run:
 The checks cover only observed files, commands, clients, and event surfaces.
 External controls must enforce controls beyond repository coverage.
 
+Hooks must not label execution as elevated without a client runtime approval
+result. Missing or contradictory approval metadata fails closed. Repository
+hooks cannot inspect client prose when the client API hides it. An external
+harness must enforce those claims.
+
+Executable changes require a behavioral test. The test-first checker examines
+changed pull request paths and staged paths. Documentation-only changes remain
+outside that check.
+
 The complete adoption inventory and recovery procedure cover every hook,
 registration, shared module, test, checker, manifest, policy file, and
 synchronized copy. A designed-denial defect report includes the exact input,
@@ -951,6 +964,22 @@ Run hosted GitHub operations through:
 
 The wrapper resolves `gh` outside the repository and verifies the authenticated
 account through a fixed account request. Direct `gh` lookup remains denied.
+
+Repository-bound commands receive a validated `--repo OWNER/REPOSITORY` target.
+The wrapper resolves `origin` from the local checkout or worktree metadata.
+The wrapper fails closed when that context is missing or unsafe. The wrapper
+keeps `gh` execution in an external safe directory.
+
+Pull request creation also receives a validated `--head OWNER:BRANCH` target
+when no head option exists. Global options may precede the GitHub command.
+Normal checkouts and worktrees work on Windows, macOS, and Linux.
+
+Argument arrays carry every value. Shell interpretation and dynamic command
+construction remain prohibited. Repository names, options, URLs, paths, and
+revisions require validation before use.
+
+Executable changes require a behavioral test. Required CI checks the changed
+range and fails when an executable change lacks a changed test.
 
 Read-only repository inspection, checks, workflow reads, and pull request
 diffs remain available through the wrapper.
