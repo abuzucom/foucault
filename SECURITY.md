@@ -25,6 +25,27 @@ instead of the trusted revision counts as a security issue.
 Scope excludes a vulnerability in code that `AUDIT.md` reviews. Report that
 to the reviewed project instead.
 
+## PR model review
+
+The PR reviewer sends the pull request title, body, diff, and configured
+review context to one allowlisted provider. The provider key stays in a
+GitHub secret. The workflow maps that key to `MODEL_API_KEY` and passes it
+only to the adapter process.
+
+The trusted caller runs on `pull_request_target`. It uses workflow code from
+the base revision. It fetches the pull request head for diff inspection. It
+never checks out or executes pull request files. Fork pull requests receive a
+skip result and no provider key.
+
+The adapter serializes all provider requests as JSON. It uses argument arrays
+for subprocess calls. It rejects shell syntax, unknown providers, unapproved
+models, and endpoints outside the exact allowlist. Provider failures and
+malformed reports fail closed.
+
+External providers receive review content. Provider selection and endpoint
+changes require maintainer review. Use a provider with data handling terms
+that permit this repository's review data.
+
 ## Reporting a Vulnerability
 
 Report vulnerabilities through GitHub private vulnerability reporting.

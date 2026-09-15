@@ -40,14 +40,23 @@ with a new or updated case.
 
 ## CI Integration
 
-[`.github/workflows/security-review.yml`](.github/workflows/security-review.yml)
-is a reusable `workflow_call` reference implementation: check out a pull
-request diff, load `AUDIT.md`, run an adopter-supplied model-call command,
-post the report as a PR comment, and optionally fail the check on `BLOCK`.
-foucault ships no model credential or provider lock-in; the model call is
-one shell command supplied by the adopting repository. Pin the `uses:` line
-and the `audit_ref` input to the same full commit SHA. See the workflow
-file's header comment for the exact adoption snippet.
+[`security-review-pr.yml`](.github/workflows/security-review-pr.yml) invokes
+the reusable workflow for same-repository pull requests. The workflow reads
+the base revision, fetches the pull request head without checking it out, and
+builds one provenance-labeled review envelope. Fork pull requests receive an
+explicit skip result because provider secrets are unavailable to them.
+
+[`security-review.yml`](.github/workflows/security-review.yml) loads the
+immutable `AUDIT.md` revision, calls the configured provider adapter, posts a
+fenced report, and gates on the final `VERDICT` line. The adapter reads the
+provider profile from [`ci/model_providers.json`](ci/model_providers.json).
+The initial profile uses Ollama with `gpt-oss:20b`.
+
+The caller maps one provider-specific repository secret, such as
+`OLLAMA_API_KEY`, to the reusable workflow's `MODEL_API_KEY` secret. Provider
+endpoints remain allowlisted in the adapter. Review content reaches only the
+configured provider endpoint. See [`docs/pr-security-review.md`](docs/pr-security-review.md)
+for setup, data flow, provider changes, failure behavior, and local testing.
 
 ## Customization
 

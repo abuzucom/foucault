@@ -48,6 +48,18 @@ exits 0. This is what runs in this repository's own CI, since foucault
 ships no model credential. Any consumer with a model credential can run the
 live check the same way.
 
+The repository's CI adapter lives at `ci.call_model:call_model`. It reads the
+active provider profile from `ci/model_providers.json`. Set `MODEL_API_KEY`
+outside the repository before running a live check. The adapter supports the
+Ollama, OpenAI-compatible, Anthropic, and Google protocols. Provider
+endpoints remain restricted to the checked-in allowlist.
+
+Ollama Cloud uses the native `/api/chat` request. Other providers use their
+native text-generation request shape. The adapter sends `AUDIT.md` as the
+system instruction and the JSON review envelope as the user message. It
+returns only the model's text content. The workflow validates both the final
+`VERDICT` line and the `VERDICT_JSON` companion.
+
 ## Case format
 
 ```

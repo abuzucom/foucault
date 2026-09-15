@@ -1,7 +1,8 @@
 name: security-review
 
 # Reusable workflow that runs AUDIT.md against a pull request diff and
-# posts the result. Adopt with:
+# posts the result. The local PR caller supplies the provider key and
+# adapter command. Adopt with:
 #
 #   jobs:
 #     security-review:
@@ -10,21 +11,19 @@ name: security-review
 #         audit_ref: "<the same full-commit-sha>"
 #         model_call_command: "python ci/call_model.py"
 #       secrets:
-#         MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
+#         MODEL_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
 #
 # Pass only the credential model_call_command needs. Never use
-# `secrets: inherit`: this job runs a model over an untrusted pull request
-# diff, and inherit hands it every secret the calling repository holds.
+# inherited secrets: this job runs a model over an untrusted pull request
+# diff, and inherited secrets hand it every secret the calling repository holds.
 #
 # Pin both `uses:` and `audit_ref` to the same full commit SHA (never a tag
 # or branch). Record the release version in a comment beside the pin.
 #
-# foucault ships no model credential and no provider lock-in. `model_call_command`
-# is a shell command supplied by the adopting repository: it reads the
-# system prompt from the file named by $AUDIT_PROMPT_FILE and the case text
-# (PR title, body, and diff) from the file named by $CASE_TEXT_FILE, then
-# writes the model's raw text response to stdout. Wire it to whichever
-# provider and model that repository's deployment of AUDIT.md uses.
+# `model_call_command` remains a public input for adopter compatibility. The
+# workflow passes it to a shell-free validator. The default adapter reads the
+# system prompt from $AUDIT_PROMPT_FILE and the case text from
+# $CASE_TEXT_FILE, then writes the model response to stdout.
 
 on:
   workflow_call:
@@ -47,6 +46,10 @@ on:
         required: false
         type: boolean
         default: true
+    secrets:
+      MODEL_API_KEY:
+        description: "Provider API key for the selected trusted adapter."
+        required: true
 
 jobs:
   review:
@@ -58,6 +61,7 @@ jobs:
       - name: Checkout pull request
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          ref: ${{ github.event.pull_request.base.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -69,10 +73,42 @@ jobs:
           path: .foucault
           persist-credentials: false
 
+      - name: Fetch pull request head object
+        env:
+          PR_HEAD_REPO_URL: ${{ github.event.pull_request.head.repo.clone_url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - "$PR_HEAD_REPO_URL" "$HEAD_SHA" <<'PY'
+          import os
+          import re
+          import subprocess
+          import sys
+          from urllib.parse import urlsplit
+
+          repository_url, head_sha = sys.argv[1:]
+          parsed = urlsplit(repository_url)
+          if parsed.scheme != "https" or parsed.hostname != "github.com":
+              raise SystemExit("PR head repository URL is not an approved GitHub URL")
+          if parsed.query or parsed.fragment or not re.fullmatch(r"[0-9a-f]{40}", head_sha):
+              raise SystemExit("PR head metadata is invalid")
+          fetch_env = os.environ.copy()
+          fetch_env["GIT_CONFIG_COUNT"] = "1"
+          fetch_env["GIT_CONFIG_KEY_0"] = "http.extraheader"
+          fetch_env["GIT_CONFIG_VALUE_0"] = (
+              "AUTHORIZATION: bearer " + fetch_env["GH_TOKEN"]
+          )
+          subprocess.run(
+              ["git", "fetch", "--no-tags", "--depth=1", repository_url, head_sha],
+              check=True,
+              env=fetch_env,
+          )
+          PY
+
       - name: Build provenance-labeled case text
         env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+          EVENT_PATH: ${{ github.event_path }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
@@ -81,7 +117,14 @@ jobs:
           import hashlib
           import json
           import os
+          import re
           import subprocess
+
+          event = json.loads(open(os.environ["EVENT_PATH"], encoding="utf-8").read())
+          pull_request = event["pull_request"]
+          for revision_name in ("BASE_SHA", "HEAD_SHA"):
+              if not re.fullmatch(r"[0-9a-f]{40}", os.environ[revision_name]):
+                  raise SystemExit(f"{revision_name} is not a full commit SHA")
 
           def digest(text):
               return hashlib.sha256(text.replace("\r\n", "\n").encode()).hexdigest()
@@ -92,8 +135,9 @@ jobs:
               capture_output=True,
               text=True,
           ).stdout
-          target = "Title: " + os.environ["PR_TITLE"] + "\n\n"
-          target += os.environ.get("PR_BODY", "") + "\n\n---\n" + diff
+          target = "Title: " + pull_request["title"] + "\n\n"
+          target += pull_request.get("body") or ""
+          target += "\n\n---\n" + diff
           envelope = {
               "mode": "PR",
               "TRUSTED_HOOK_CONTEXT": {
@@ -116,9 +160,13 @@ jobs:
           AUDIT_PROMPT_FILE: .foucault/AUDIT.md
           CASE_TEXT_FILE: case_text.txt
           MODEL_CALL_COMMAND: ${{ inputs.model_call_command }}
+          MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
         run: |
           set -euo pipefail
-          eval "$MODEL_CALL_COMMAND" > response.txt
+          python3 ci/run_model_command.py "$MODEL_CALL_COMMAND" > response.txt
+
+      - name: Validate report structure
+        run: python3 scripts/check_pr_review_response.py response.txt
 
       - name: Parse verdict
         id: verdict

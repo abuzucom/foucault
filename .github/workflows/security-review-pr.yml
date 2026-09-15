@@ -1,0 +1,31 @@
+name: security-review-pr
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited, ready_for_review, converted_to_draft]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    uses: ./.github/workflows/security-review.yml
+    with:
+      # Foucault 3.0.2 policy revision.
+      audit_ref: "01e2a24324325461ccf224013e04aeb432510eee"
+      model_call_command: "python3 ci/call_model.py"
+      pr_comment: true
+      fail_on_block: true
+    secrets:
+      MODEL_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+
+  fork-review-skipped:
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain skipped review
+        run: >-
+          echo "Model review skipped for a fork pull request because provider
+          secrets are not available to this job."

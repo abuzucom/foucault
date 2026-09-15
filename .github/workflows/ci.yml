@@ -89,10 +89,10 @@ jobs:
         run: python3 scripts/check_persist_credentials.py .github/workflows/*.yml
 
       - name: Weak hashing
-        run: python3 scripts/check_weak_hashing.py scripts/*.py
+        run: python3 scripts/check_weak_hashing.py scripts/*.py ci/*.py
 
       - name: Secret heuristics
-        run: python3 scripts/check_secrets_heuristic.py scripts/*.py .github/workflows/*.yml Makefile
+        run: python3 scripts/check_secrets_heuristic.py scripts/*.py ci/*.py .github/workflows/*.yml Makefile
 
       - name: Conflict markers
         run: python3 scripts/check_conflict_markers.py
