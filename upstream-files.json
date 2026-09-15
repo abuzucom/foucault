@@ -119,7 +119,7 @@
     "SECURITY.md": "135860ea6deee1c8231d3bf1a43e57f4e55446d63a8362bd75b21c17f70e1cb5",
     "docs/agent-policy/enforcement.md": "ffa0acb0d10d0b5843da52004cb46e47cc804687469eea5c85eb6dfb01ad38fc",
     "docs/agent-policy/github.md": "16b27ee756f23bb8365e62c13794bd54b47e57abe231439acfce4ed28d3a7872",
-    "docs/template-drift.md": "f5be403cabdf2624ab4d60e03de6ed932d2a6e30542adaad2ab82859350bfefa",
+    "docs/template-drift.md": "2ce4d068c7d07c657f1780307922b605b44c2a345f98bb7d294f5142f4391e10",
     "scripts/check_compliance_tree.py": "9d68a0d4e87d94009e294708a2042d5d2ac1414a284f8cec00db30d78a6a4ab3",
     "scripts/check_gate_adoption.py": "8d034870cb8a430eb9eb6d29976ac03435b823ffd2fbd6083782a62586ec5138",
     "scripts/check_test_first.py": "37a5b31be7cdc75321fdabdad5fcb8bc8b050cb6708e62c420cb466281cbde28",

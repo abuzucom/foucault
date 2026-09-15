@@ -4,7 +4,7 @@
 enforcement bundle. This repository adopts commit
 `e1408dcfae9c8c714e8522d8236b58b6345ef2ba`, released upstream as 2.0.20.
 
-The September 2026 reconciliation audited upstream `main` at `ad632c4`.
+The 2026-09-15 reconciliation audited upstream `main` at `ad632c4`.
 The audit covered the complete GitHub wrapper path from argument validation
 through repository context injection, authentication, execution, bounded
 output, and failure classification.
