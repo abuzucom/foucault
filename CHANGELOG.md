@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.1.5] (2026-09-15)
+
+### Fixed
+
+- Sanitized control characters and credential-like values in trusted GitHub
+  command diagnostics.
+- Reconciled secure Git delivery guidance with `abuzucom/agents` main at
+  `ad632c4`.
+
 ## [3.1.4] (2026-09-15)
 
 ### Fixed

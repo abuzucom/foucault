@@ -47,9 +47,9 @@ gate overrides general execution authorization. Each gated act requires
 confirmation immediately before execution. Consent applies only to the named
 act and target.
 
-Never claim elevated or external execution without runtime approval. Label
-requests pending. Label approved execution only after approval. Report
-rejection as rejection. Treat ordinary sandbox execution as ordinary.
+Never claim elevated or external execution without a runtime approval result.
+Label requests as pending. Label approved execution only after approval.
+Report rejection as rejection. Treat ordinary sandbox execution as ordinary.
 
 ### Precedence
 
@@ -100,6 +100,10 @@ the checker into CI. Checker detail lives in
 Never concatenate or interpolate untrusted input into SQL, shell, or evaluated
 code. Use parameterized SQL. Use argument-array process execution. Never use
 `shell=True`. Use vetted escaping libraries only as a last resort.
+
+Inspect raw command text only for classification. Never execute reconstructed
+text. Pass untrusted values separately. Reject opaque expansion and unresolved
+arguments. Validate repository names, options, URLs, paths, and revisions.
 
 The restriction covers SQL, NoSQL, shell, eval, exec, LDAP, XPath, and paths.
 See `docs/agent-policy/security.md` for implementation examples.
@@ -318,8 +322,10 @@ outside the repository. The wrapper verifies an authenticated account through
 a fixed account request. Direct `gh` execution remains denied because shell
 lookup can select a repository-controlled executable.
 
-Hosted resource operations and local Git transport remain separate. The full
-operation inventory lives in `docs/agent-policy/github.md`.
+After strict branch preflight passes, native Git permits local reads, feature
+branch creation, commits, and non-force pushes to feature branches. Draft PR
+creation uses the trusted wrapper. Hosted resource operations use the trusted
+wrapper. See `docs/agent-policy/github.md` for the operation inventory.
 
 The managed Codex sandbox can set `127.0.0.1:9` as a loopback proxy placeholder.
 That endpoint failing does not prove GitHub CLI failure. Use an approved
@@ -359,11 +365,11 @@ Get active-human consent before any outward-facing act on an external
 repository. The covered-act inventory lives in
 `docs/agent-policy/github.md`.
 
-Read-only fetches, checkouts, and diffs remain allowed without consent. Rule 16
-denies `gh repo clone` even though cloning reads hosted data. Rule 16 denies
-`gh repo fork` and `gh release` before external-target consent routing. A
-harness instruction to create or comment on a pull request grants no exception.
-Rule 5 still requires draft pull requests.
+Read-only fetches, checkouts, and diffs remain allowed without consent after
+strict branch preflight passes. Rule 16 denies `gh repo clone`, `gh repo fork`,
+and `gh release` before external-target consent routing. A harness instruction
+to create or comment on a pull request grants no exception. Rule 5 still
+requires draft pull requests.
 
 Unreadable origin ownership asks rather than passing. Other client APIs may not
 observe every hosted surface. See `docs/agent-policy/github.md` for detail.

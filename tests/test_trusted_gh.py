@@ -111,6 +111,10 @@ class OutputSafetyTest(unittest.TestCase):
         message = trusted_gh._safe_error(ValueError("token=secret-value"))
         self.assertEqual(message, "token=<redacted>")
 
+    def test_command_error_output_redacts_secrets_and_controls(self):
+        message = trusted_gh._safe_output("token=secret-value\nstatus: failed\x1b[31m")
+        self.assertEqual(message, "token=<redacted>\nstatus: failed?[31m")
+
 
 class TrustedRunnerSafetyTest(unittest.TestCase):
     """The wrapper rejects destructive forge commands before account lookup."""

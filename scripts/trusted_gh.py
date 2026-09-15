@@ -393,12 +393,22 @@ def _classify_failure(output: str) -> str:
 
 def _safe_error(error: BaseException) -> str:
     """Return an error without credential-like key-value values."""
-    message = str(error)
+    return _redact_sensitive_text(str(error))
+
+
+def _redact_sensitive_text(message: str) -> str:
+    """Return text without credential-like key-value values."""
     return re.sub(
         r"(?i)(token|password|secret|authorization)(\s*[:=]\s*)\S+",
         r"\1\2<redacted>",
         message,
     )
+
+
+def _safe_output(output: str) -> str:
+    """Return bounded command output without terminal control characters."""
+    sanitized = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "?", output)
+    return _redact_sensitive_text(sanitized)
 
 
 def _run_requested_command(repo_root, arguments: list[str]) -> int:
@@ -445,7 +455,7 @@ def _run_requested_command(repo_root, arguments: list[str]) -> int:
         print(f"error: {category}; inspect connectivity and repository context", file=sys.stderr)
         return 1
     sys.stdout.write(result.stdout[:COMMAND_OUTPUT_LIMIT])
-    safe_stderr = _safe_error(result.stderr[:COMMAND_OUTPUT_LIMIT])
+    safe_stderr = _safe_output(result.stderr[:COMMAND_OUTPUT_LIMIT])
     sys.stderr.write(safe_stderr)
     if result.returncode != 0:
         print(f"error: {_classify_failure(safe_stderr)}", file=sys.stderr)
