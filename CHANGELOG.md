@@ -18,6 +18,7 @@ loading `AUDIT.md` into a deployment.
   final-argument gate evaluation.
 - Refreshed the upstream drift manifest after the reconciliation so CI checks
   all locally adapted files at their current normalized hashes.
+- Restored synchronized policy copies after the detailed documentation update.
 
 ## [3.1.4] (2026-09-15)
 

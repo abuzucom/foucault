@@ -908,6 +908,16 @@ Executable changes require a behavioral test. The test-first checker examines
 changed pull request paths and staged paths. Documentation-only changes remain
 outside that check.
 
+GitHub wrapper audits must verify both gates. The first gate evaluates the
+caller-supplied arguments. The second gate evaluates the final vector after
+repository context injection. Tests must cover explicit target preservation,
+global options, option termination, linked worktrees, detached heads, malformed
+remotes, proxy filtering, token denial, and sanitized diagnostics.
+
+The wrapper must preserve Foucault-specific protections when upstream changes
+remove them. Those protections include token-output denial, attached body text
+escape detection, bounded output, and safe exception reporting.
+
 The complete adoption inventory and recovery procedure cover every hook,
 registration, shared module, test, checker, manifest, policy file, and
 synchronized copy. A designed-denial defect report includes the exact input,
@@ -983,6 +993,23 @@ Normal checkouts and worktrees work on Windows, macOS, and Linux.
 Argument arrays carry every value. Shell interpretation and dynamic command
 construction remain prohibited. Repository names, options, URLs, paths, and
 revisions require validation before use.
+
+The wrapper resolves context in this order:
+
+1. Validate the entrypoint and argument vector.
+2. Reject token-output requests and literal escape text.
+3. Resolve `gh` outside the repository.
+4. Read checkout or linked-worktree metadata.
+5. Validate the GitHub owner and repository from `origin`.
+6. Validate the current branch before pull request head injection.
+7. Add missing `--repo` or `--head` values.
+8. Re-run the GitHub command gate against the final argument vector.
+9. Verify the authenticated account through the fixed API request.
+10. Run `gh` externally with a sanitized environment and bounded output.
+
+Failure diagnostics redact credential-like values and replace terminal control
+characters. Raw command text remains classification data only. The wrapper
+never reconstructs or executes a command from diagnostic text.
 
 Executable changes require a behavioral test. Required CI checks the changed
 range and fails when an executable change lacks a changed test.
