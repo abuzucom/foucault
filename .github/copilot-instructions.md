@@ -47,9 +47,9 @@ gate overrides general execution authorization. Each gated act requires
 confirmation immediately before execution. Consent applies only to the named
 act and target.
 
-Never claim elevated or external execution without runtime approval. Label
-requests pending. Label approved execution only after approval. Report
-rejection as rejection. Treat ordinary sandbox execution as ordinary.
+Never claim elevated or external execution without a runtime approval result.
+Label requests as pending. Label approved execution only after approval.
+Report rejection as rejection. Treat ordinary sandbox execution as ordinary.
 
 ### Precedence
 
@@ -100,6 +100,10 @@ the checker into CI. Checker detail lives in
 Never concatenate or interpolate untrusted input into SQL, shell, or evaluated
 code. Use parameterized SQL. Use argument-array process execution. Never use
 `shell=True`. Use vetted escaping libraries only as a last resort.
+
+Inspect raw command text only for classification. Never execute reconstructed
+text. Pass untrusted values separately. Reject opaque expansion and unresolved
+arguments. Validate repository names, options, URLs, paths, and revisions.
 
 The restriction covers SQL, NoSQL, shell, eval, exec, LDAP, XPath, and paths.
 See `docs/agent-policy/security.md` for implementation examples.
@@ -318,8 +322,10 @@ outside the repository. The wrapper verifies an authenticated account through
 a fixed account request. Direct `gh` execution remains denied because shell
 lookup can select a repository-controlled executable.
 
-Hosted resource operations and local Git transport remain separate. The full
-operation inventory lives in `docs/agent-policy/github.md`.
+After strict branch preflight passes, native Git permits local reads, feature
+branch creation, commits, and non-force pushes to feature branches. Draft PR
+creation uses the trusted wrapper. Hosted resource operations use the trusted
+wrapper. See `docs/agent-policy/github.md` for the operation inventory.
 
 The managed Codex sandbox can set `127.0.0.1:9` as a loopback proxy placeholder.
 That endpoint failing does not prove GitHub CLI failure. Use an approved
@@ -359,11 +365,11 @@ Get active-human consent before any outward-facing act on an external
 repository. The covered-act inventory lives in
 `docs/agent-policy/github.md`.
 
-Read-only fetches, checkouts, and diffs remain allowed without consent. Rule 16
-denies `gh repo clone` even though cloning reads hosted data. Rule 16 denies
-`gh repo fork` and `gh release` before external-target consent routing. A
-harness instruction to create or comment on a pull request grants no exception.
-Rule 5 still requires draft pull requests.
+Read-only fetches, checkouts, and diffs remain allowed without consent after
+strict branch preflight passes. Rule 16 denies `gh repo clone`, `gh repo fork`,
+and `gh release` before external-target consent routing. A harness instruction
+to create or comment on a pull request grants no exception. Rule 5 still
+requires draft pull requests.
 
 Unreadable origin ownership asks rather than passing. Other client APIs may not
 observe every hosted surface. See `docs/agent-policy/github.md` for detail.
@@ -628,6 +634,9 @@ Unicode belongs inside source string literals and required domain data. Keep
 Unicode out of policy documentation and comments. A domain requirement can
 license Unicode inside required data. `check_ascii.py` enforces the documented
 prose scope.
+
+Use UTF-8 and LF line endings. The policy-size checker rejects CRLF policy
+bytes.
 
 **American English spelling.** Use American spelling in code, comments, commit
 messages, and documentation. British variants include `-our`,
@@ -902,6 +911,16 @@ Executable changes require a behavioral test. The test-first checker examines
 changed pull request paths and staged paths. Documentation-only changes remain
 outside that check.
 
+GitHub wrapper audits must verify both gates. The first gate evaluates the
+caller-supplied arguments. The second gate evaluates the final vector after
+repository context injection. Tests must cover explicit target preservation,
+global options, option termination, linked worktrees, detached heads, malformed
+remotes, proxy filtering, token denial, and sanitized diagnostics.
+
+The wrapper must preserve Foucault-specific protections when upstream changes
+remove them. Those protections include token-output denial, attached body text
+escape detection, bounded output, and safe exception reporting.
+
 The complete adoption inventory and recovery procedure cover every hook,
 registration, shared module, test, checker, manifest, policy file, and
 synchronized copy. A designed-denial defect report includes the exact input,
@@ -910,6 +929,11 @@ and message. A blocking gate does not authorize another act.
 
 Use a CI job, pre-commit hook, or script for mechanically checkable rules.
 State the limitation for rules that require human semantic review.
+
+Policy inputs use LF line endings. The policy-size checker rejects CRLF bytes
+before accepting the file. Script subprocesses decode text as UTF-8 with
+replacement handling. This keeps diagnostics usable when Git or GitHub CLI
+emits bytes that the Windows system codec cannot decode.
 
 The destructive gate set includes the Bash, PowerShell, CMD, shared parser,
 platform policy, shared gate, and parity-test files. Register Bash, PowerShell,
@@ -977,6 +1001,23 @@ Normal checkouts and worktrees work on Windows, macOS, and Linux.
 Argument arrays carry every value. Shell interpretation and dynamic command
 construction remain prohibited. Repository names, options, URLs, paths, and
 revisions require validation before use.
+
+The wrapper resolves context in this order:
+
+1. Validate the entrypoint and argument vector.
+2. Reject token-output requests and literal escape text.
+3. Resolve `gh` outside the repository.
+4. Read checkout or linked-worktree metadata.
+5. Validate the GitHub owner and repository from `origin`.
+6. Validate the current branch before pull request head injection.
+7. Add missing `--repo` or `--head` values.
+8. Re-run the GitHub command gate against the final argument vector.
+9. Verify the authenticated account through the fixed API request.
+10. Run `gh` externally with a sanitized environment and bounded output.
+
+Failure diagnostics redact credential-like values and replace terminal control
+characters. Raw command text remains classification data only. The wrapper
+never reconstructs or executes a command from diagnostic text.
 
 Executable changes require a behavioral test. Required CI checks the changed
 range and fails when an executable change lacks a changed test.

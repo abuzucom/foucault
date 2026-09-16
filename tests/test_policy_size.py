@@ -40,6 +40,13 @@ class PolicySizeTests(unittest.TestCase):
             path.write_bytes(b"bad\xc3\xa9")
             self.assertTrue(any("not ASCII" in item for item in find_violations(path)))
 
+    def test_crlf_policy_reports_violation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "AGENTS.md"
+            path.write_bytes(b"policy\r\n")
+            self.assertTrue(any("LF line endings" in item
+                                for item in find_violations(path)))
+
 
 if __name__ == "__main__":
     unittest.main()

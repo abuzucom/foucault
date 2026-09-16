@@ -111,6 +111,23 @@ class OutputSafetyTest(unittest.TestCase):
         message = trusted_gh._safe_error(ValueError("token=secret-value"))
         self.assertEqual(message, "token=<redacted>")
 
+    def test_command_error_output_redacts_secrets_and_controls(self):
+        message = trusted_gh._safe_output("token=secret-value\nstatus: failed\x1b[31m")
+        self.assertEqual(message, "token=<redacted>\nstatus: failed?[31m")
+
+    def test_runner_decodes_malformed_output_with_utf8_replacement(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            with patch.object(trusted_gh, "resolve_gh", return_value=sys.executable):
+                with patch.object(trusted_gh, "_safe_directory", return_value=root):
+                    result = trusted_gh.run_gh(
+                        root,
+                        ["-c", "import sys; sys.stdout.buffer.write(bytes([129]))"],
+                    )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "\ufffd")
+
 
 class TrustedRunnerSafetyTest(unittest.TestCase):
     """The wrapper rejects destructive forge commands before account lookup."""

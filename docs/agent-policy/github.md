@@ -20,6 +20,23 @@ Argument arrays carry every value. Shell interpretation and dynamic command
 construction remain prohibited. Repository names, options, URLs, paths, and
 revisions require validation before use.
 
+The wrapper resolves context in this order:
+
+1. Validate the entrypoint and argument vector.
+2. Reject token-output requests and literal escape text.
+3. Resolve `gh` outside the repository.
+4. Read checkout or linked-worktree metadata.
+5. Validate the GitHub owner and repository from `origin`.
+6. Validate the current branch before pull request head injection.
+7. Add missing `--repo` or `--head` values.
+8. Re-run the GitHub command gate against the final argument vector.
+9. Verify the authenticated account through the fixed API request.
+10. Run `gh` externally with a sanitized environment and bounded output.
+
+Failure diagnostics redact credential-like values and replace terminal control
+characters. Raw command text remains classification data only. The wrapper
+never reconstructs or executes a command from diagnostic text.
+
 Executable changes require a behavioral test. Required CI checks the changed
 range and fails when an executable change lacks a changed test.
 

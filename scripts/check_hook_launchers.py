@@ -89,6 +89,7 @@ def main() -> int:
         for gate, tool_name in gates:
             result = subprocess.run(
                 [launcher, str(gate)], input=_deny_payload(tool_name), text=True,
+                encoding="utf-8", errors="replace",
                 capture_output=True, cwd=root, check=False,
             )
             if result.returncode != 2:

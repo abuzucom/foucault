@@ -28,6 +28,8 @@ def find_violations(path: Path) -> list[str]:
         violations.append(
             f"{path}: {len(data)} bytes exceeds {MAX_POLICY_BYTES} bytes"
         )
+    if b"\r\n" in data:
+        violations.append(f"{path}: policy must use LF line endings")
     try:
         text = data.decode("ascii")
     except UnicodeDecodeError:
