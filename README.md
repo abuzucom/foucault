@@ -118,6 +118,18 @@ local checkout or worktree. The wrapper fails closed when context is missing
 or unsafe. Pull request creation receives a validated head context when no
 head option exists. Windows, macOS, and Linux worktree layouts are supported.
 
+The wrapper decodes GitHub CLI output as UTF-8 and replaces malformed bytes.
+If a Windows log request reports a codec error, enable Python UTF-8 mode for
+diagnosis and rerun the command:
+
+```powershell
+$env:PYTHONUTF8 = "1"
+python scripts/trusted_gh.py run <gh arguments>
+```
+
+The environment setting diagnoses codec selection. It does not replace the
+wrapper's explicit decoding behavior.
+
 Agents must not claim elevated or external execution without a runtime approval
 result. Repository hooks enforce observable command gates. An external harness
 must enforce client output claims when the client API hides them.

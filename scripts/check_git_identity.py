@@ -210,6 +210,8 @@ def _standalone_run_git(repo, arguments: list[str], *, check=False, runner=None)
         env=environment,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         check=check,
     )
 

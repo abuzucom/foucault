@@ -38,6 +38,16 @@ Executable changes require a behavioral test. The test-first checker examines
 changed pull request paths and staged paths. Documentation-only changes remain
 outside that check.
 
+GitHub wrapper audits must verify both gates. The first gate evaluates the
+caller-supplied arguments. The second gate evaluates the final vector after
+repository context injection. Tests must cover explicit target preservation,
+global options, option termination, linked worktrees, detached heads, malformed
+remotes, proxy filtering, token denial, and sanitized diagnostics.
+
+The wrapper must preserve Foucault-specific protections when upstream changes
+remove them. Those protections include token-output denial, attached body text
+escape detection, bounded output, and safe exception reporting.
+
 The complete adoption inventory and recovery procedure cover every hook,
 registration, shared module, test, checker, manifest, policy file, and
 synchronized copy. A designed-denial defect report includes the exact input,
@@ -46,6 +56,11 @@ and message. A blocking gate does not authorize another act.
 
 Use a CI job, pre-commit hook, or script for mechanically checkable rules.
 State the limitation for rules that require human semantic review.
+
+Policy inputs use LF line endings. The policy-size checker rejects CRLF bytes
+before accepting the file. Script subprocesses decode text as UTF-8 with
+replacement handling. This keeps diagnostics usable when Git or GitHub CLI
+emits bytes that the Windows system codec cannot decode.
 
 The destructive gate set includes the Bash, PowerShell, CMD, shared parser,
 platform policy, shared gate, and parity-test files. Register Bash, PowerShell,

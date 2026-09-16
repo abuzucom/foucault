@@ -6,6 +6,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.1.5] (2026-09-15)
+
+### Fixed
+
+- Sanitized control characters and credential-like values in trusted GitHub
+  command diagnostics.
+- Reconciled secure Git delivery guidance with `abuzucom/agents` main at
+  `d486437`.
+- Documented the end-to-end wrapper audit, retained local protections, and
+  final-argument gate evaluation.
+- Refreshed the upstream drift manifest after the reconciliation so CI checks
+  all locally adapted files at their current normalized hashes.
+- Restored synchronized policy copies after the detailed documentation update.
+- Adopted upstream UTF-8 subprocess decoding with replacement handling for
+  GitHub, Git, identity, hook, and test-first diagnostics.
+- Enforced LF policy line endings in the working tree and policy-size checker.
+
 ## [3.1.4] (2026-09-15)
 
 ### Fixed

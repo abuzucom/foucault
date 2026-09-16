@@ -23,7 +23,8 @@ def changed_files(base: str, head: str) -> list[str]:
     """Return changed paths from a validated revision range."""
     result = subprocess.run(
         ["git", "diff", "--name-only", f"{base}...{head}", "--"],
-        capture_output=True, text=True, check=False,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        check=False,
     )
     if result.returncode:
         raise OSError("cannot inspect the pull request range")
@@ -34,7 +35,8 @@ def staged_files() -> list[str]:
     """Return staged paths for the local pre-commit check."""
     result = subprocess.run(
         ["git", "diff", "--cached", "--name-only", "--"],
-        capture_output=True, text=True, check=False,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        check=False,
     )
     if result.returncode:
         raise OSError("cannot inspect staged changes")
