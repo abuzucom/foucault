@@ -240,7 +240,8 @@ def terminate_process_tree(process: subprocess.Popen) -> None:
     if os.name == "nt":
         subprocess.run(
             ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-            capture_output=True, check=False, text=True)
+            capture_output=True, check=False, text=True,
+            encoding="utf-8", errors="replace")
     else:
         os.killpg(process.pid, signal.SIGTERM)
     try:
@@ -270,7 +271,7 @@ def run_test_shard(
     process = subprocess.Popen(
         [sys.executable, "-m", "unittest", import_name],
         cwd=root, env=environment, stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE, text=True,
+        stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace",
         start_new_session=os.name != "nt", creationflags=creationflags)
     if process_registry is not None:
         process_registry.register_process(label, process)

@@ -1,10 +1,10 @@
 # Template drift against abuzucom/agents
 
 `abuzucom/agents` is the upstream source for the adopted agent policy and
-enforcement bundle. This repository adopts commit
-`e1408dcfae9c8c714e8522d8236b58b6345ef2ba`, released upstream as 2.0.20.
+enforcement bundle. This repository tracks the reviewed upstream reference
+at commit `d48643773171004ae36dfbed077ee1850a8e2016`.
 
-The 2026-09-15 reconciliation audited upstream `main` at `ad632c4`.
+The 2026-09-15 reconciliation audited upstream `main` at `d486437`.
 The audit covered the complete GitHub wrapper path from argument validation
 through repository context injection, authentication, execution, bounded
 output, and failure classification.
@@ -46,6 +46,10 @@ output, and failure classification.
   boundaries for the newer upstream contract.
 - Existing evaluator, delivery, workflow, and trusted GitHub tests remain
   alongside the upstream gate tests.
+- UTF-8 subprocess decoding uses replacement handling across trusted Git,
+  trusted GitHub, identity, hook coverage, launcher, and test-first scripts.
+- LF policy line endings are enforced by `.gitattributes` and the policy-size
+  checker.
 
 ## Not adopted
 
@@ -72,7 +76,7 @@ before changing the pin. Record every file as adopted, adapted, or declined.
 remain identical across controlled adopters. Run
 `python scripts/sync.py --check-shared` after every shared gate change.
 
-The reconciliation changed four locally adapted files and refreshed their
+The reconciliation changed locally adapted files and refreshed their
 normalized hashes in `upstream-files.json`. The manifest repair keeps CI's
 local drift check aligned with the reviewed source. It does not replace
 Foucault adaptations with upstream removals.

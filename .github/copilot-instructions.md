@@ -635,6 +635,9 @@ Unicode out of policy documentation and comments. A domain requirement can
 license Unicode inside required data. `check_ascii.py` enforces the documented
 prose scope.
 
+Use UTF-8 and LF line endings. The policy-size checker rejects CRLF policy
+bytes.
+
 **American English spelling.** Use American spelling in code, comments, commit
 messages, and documentation. British variants include `-our`,
 `-ise`/`-isation`, `-re`, and doubled consonants before a suffix. Valid ASCII
@@ -926,6 +929,11 @@ and message. A blocking gate does not authorize another act.
 
 Use a CI job, pre-commit hook, or script for mechanically checkable rules.
 State the limitation for rules that require human semantic review.
+
+Policy inputs use LF line endings. The policy-size checker rejects CRLF bytes
+before accepting the file. Script subprocesses decode text as UTF-8 with
+replacement handling. This keeps diagnostics usable when Git or GitHub CLI
+emits bytes that the Windows system codec cannot decode.
 
 The destructive gate set includes the Bash, PowerShell, CMD, shared parser,
 platform policy, shared gate, and parity-test files. Register Bash, PowerShell,

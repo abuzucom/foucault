@@ -635,6 +635,9 @@ Unicode out of policy documentation and comments. A domain requirement can
 license Unicode inside required data. `check_ascii.py` enforces the documented
 prose scope.
 
+Use UTF-8 and LF line endings. The policy-size checker rejects CRLF policy
+bytes.
+
 **American English spelling.** Use American spelling in code, comments, commit
 messages, and documentation. British variants include `-our`,
 `-ise`/`-isation`, `-re`, and doubled consonants before a suffix. Valid ASCII

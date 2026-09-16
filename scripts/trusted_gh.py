@@ -332,6 +332,8 @@ def run_gh(repo_root, arguments: list[str], *, runner=None, timeout=None):
         env=environment,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         check=False,
         timeout=timeout,
     )

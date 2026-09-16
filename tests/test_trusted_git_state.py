@@ -3,14 +3,38 @@
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / "scripts" / "read_git_state.py"
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 import read_git_state
+import trusted_git
+
+
+class TrustedGitRunnerTest(unittest.TestCase):
+    """Git subprocess output uses resilient UTF-8 decoding."""
+
+    def test_runner_decodes_malformed_output_with_utf8_replacement(self):
+        def runner(_command, **kwargs):
+            return subprocess.run(
+                [sys.executable, "-c",
+                 "import sys; sys.stdout.buffer.write(bytes([129]))"],
+                **kwargs,
+            )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            with patch.object(trusted_git, "resolve_git", return_value=sys.executable):
+                with patch.object(trusted_git, "_safe_directory", return_value=root):
+                    result = trusted_git.run_git(root, [], runner=runner)
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "\ufffd")
 
 
 class GitStateTextTest(unittest.TestCase):

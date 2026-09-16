@@ -13,12 +13,15 @@ loading `AUDIT.md` into a deployment.
 - Sanitized control characters and credential-like values in trusted GitHub
   command diagnostics.
 - Reconciled secure Git delivery guidance with `abuzucom/agents` main at
-  `ad632c4`.
+  `d486437`.
 - Documented the end-to-end wrapper audit, retained local protections, and
   final-argument gate evaluation.
 - Refreshed the upstream drift manifest after the reconciliation so CI checks
   all locally adapted files at their current normalized hashes.
 - Restored synchronized policy copies after the detailed documentation update.
+- Adopted upstream UTF-8 subprocess decoding with replacement handling for
+  GitHub, Git, identity, hook, and test-first diagnostics.
+- Enforced LF policy line endings in the working tree and policy-size checker.
 
 ## [3.1.4] (2026-09-15)
 
