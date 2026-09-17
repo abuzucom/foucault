@@ -12,6 +12,7 @@ loading `AUDIT.md` into a deployment.
 
 - Posted the review comment to the resolved pull request number. The comment
   step read `context.issue.number`, which is empty under `workflow_run`.
+- Added a regression test for the review-comment pull request target.
 
 ## [3.2.1] (2026-09-17)
 
