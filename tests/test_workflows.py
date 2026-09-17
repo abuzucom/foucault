@@ -96,12 +96,16 @@ class CheckRunVisibilityTest(unittest.TestCase):
 
     A workflow_run review executes on the default branch. Without a check
     run on the head revision the result never appears in the pull request
-    checks box.
+    checks box. Assertions scope to the publish step block so a matching
+    string elsewhere in the file cannot satisfy them. A JavaScript
+    execution harness would need a new dependency, so the assertions stay
+    text-level per the file convention.
     """
 
     def setUp(self):
         self.review = REVIEW_PATH.read_text(encoding="utf-8")
         self.caller = CALLER_PATH.read_text(encoding="utf-8")
+        self.step = self.review.split("name: Publish check run", 1)[1]
 
     def test_review_job_grants_checks_write(self):
         self.assertIn("checks: write", self.review)
@@ -110,11 +114,19 @@ class CheckRunVisibilityTest(unittest.TestCase):
         self.assertIn("checks: write", self.caller)
 
     def test_check_run_targets_the_resolved_head(self):
-        self.assertIn("github.rest.checks.create", self.review)
-        self.assertIn("steps.resolve.outputs.head_sha", self.review)
+        self.assertIn("github.rest.checks.create", self.step)
+        self.assertIn("steps.resolve.outputs.head_sha", self.step)
 
     def test_check_run_publishes_on_every_outcome(self):
-        self.assertIn("if: ${{ always() }}", self.review)
+        self.assertIn("if: ${{ always() }}", self.step)
+
+    def test_summary_sanitizes_the_model_influenced_verdict(self):
+        self.assertIn("value.replace(", self.step)
+        self.assertIn("slice(0, 200)", self.step)
+
+    def test_publication_has_a_timeout_and_one_retry(self):
+        self.assertIn("timeout-minutes: 1", self.step)
+        self.assertIn("attempt < 2", self.step)
 
 
 class CommentTargetTest(unittest.TestCase):

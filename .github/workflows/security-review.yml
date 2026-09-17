@@ -357,6 +357,7 @@ jobs:
 
       - name: Publish check run
         if: ${{ always() }}
+        timeout-minutes: 1
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
@@ -371,9 +372,14 @@ jobs:
             const conclusion = process.env.JOB_STATUS === "success"
               ? "success"
               : "failure";
-            const verdictLine = process.env.VERDICT_LINE
+            // The verdict line is model output shaped by the pull request
+            // under review. Strip characters that could break the inline
+            // code span, and bound the length.
+            const sanitize = (value) =>
+              value.replace(/[`\\\x00-\x1f\x7f]/g, "").slice(0, 200);
+            const verdictLine = sanitize(process.env.VERDICT_LINE || "")
               || "review failed before a verdict was produced";
-            await github.rest.checks.create({
+            const request = {
               owner: context.repo.owner,
               repo: context.repo.repo,
               name: "security-review",
@@ -385,4 +391,17 @@ jobs:
                 title: `security-review: ${conclusion}`,
                 summary: `Model review result: \`${verdictLine}\``,
               },
-            });
+            };
+            let lastError = null;
+            for (let attempt = 0; attempt < 2; attempt++) {
+              try {
+                await github.rest.checks.create(request);
+                lastError = null;
+                break;
+              } catch (error) {
+                lastError = error;
+              }
+            }
+            if (lastError) {
+              throw lastError;
+            }
