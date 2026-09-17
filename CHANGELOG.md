@@ -6,12 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
-## [3.2.1] (2026-09-17)
+## [3.2.2] (2026-09-17)
 
 ### Fixed
 
 - Listed the `ambiguous-hook-provenance-pr` and `policy-reinjection-hook-pr`
   cases in the `eval/README.md` case table.
+
+## [3.2.1] (2026-09-17)
+
+### Fixed
+
+- Forwarded sanitized adapter diagnostics on model-command failure. CI logs
+  now show the provider error class without credentials or control
+  characters.
 
 ## [3.2.0] (2026-09-16)
 
