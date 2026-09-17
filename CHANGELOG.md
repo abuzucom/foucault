@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.3.8] (2026-09-17)
+
+### Added
+
+- Documented the adopter wiring for the pull request security review in
+  `docs/pr-security-review.md`.
+
 ## [3.3.7] (2026-09-17)
 
 ### Fixed

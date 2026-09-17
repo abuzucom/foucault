@@ -51,6 +51,75 @@ The provider receives the system policy and the review envelope. The provider
 does not receive the GitHub token, the provider configuration file, or other
 repository secrets.
 
+## Adoption in another repository
+
+An adopter repository calls `security-review.yml` as a reusable workflow. The
+workflow never executes pull request content. Pin every reference to a full
+commit SHA.
+
+### What the adopter supplies
+
+- A caller workflow in the adopter repository.
+- The `ci/` adapter directory at the adopter's base revision. The reusable
+  workflow runs `ci/build_pr_case.py`, `ci/run_model_command.py`, and
+  `ci/call_model.py` from the caller's checkout. Copy the directory from the
+  pinned foucault commit. Keep `ci/model_providers.json` with it.
+- A provider API key as a repository secret, such as `OLLAMA_API_KEY`.
+- An `adopters/<repo>.md` record per `adopters/README.md`.
+
+Only `AUDIT.md` comes from foucault at runtime. The workflow checks it out
+into `.foucault` at `audit_ref`.
+
+### Caller workflow
+
+Mirror `security-review-pr.yml`. It resolves the pull request after a trusted
+workflow completes, then calls the reusable workflow:
+
+```yaml
+jobs:
+  security-review:
+    uses: abuzucom/foucault/.github/workflows/security-review.yml@<full-commit-sha>
+    with:
+      audit_ref: "<the same full-commit-sha>"
+      model_call_command: "python3 ci/call_model.py"
+      pr_comment: true
+      fail_on_block: true
+      pr_number: ${{ needs.resolve-pr.outputs.pr_number }}
+      base_sha: ${{ needs.resolve-pr.outputs.base_sha }}
+      head_sha: ${{ needs.resolve-pr.outputs.head_sha }}
+      head_repo_url: ${{ needs.resolve-pr.outputs.head_repo_url }}
+      head_repo_full_name: ${{ needs.resolve-pr.outputs.head_repo_full_name }}
+    secrets:
+      MODEL_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+```
+
+The `workflow_run` trigger keeps the caller on default-branch code. A pull
+request cannot edit the reviewer. Copy `security-review-pr.yml` and change
+nothing else.
+
+A direct `pull_request` trigger also works. The reusable workflow resolves
+`context.payload.pull_request` itself. One trade-off applies. A pull request
+can edit the caller file in the same repository. Prefer the `workflow_run`
+pattern, or require review for workflow changes in branch protection.
+
+### Pins and secrets
+
+- Pin `uses:` and `audit_ref` to the same full commit SHA. Never a tag or
+  branch. Record the release version in a comment beside the pin.
+- Map only the provider secret. Never use inherited secrets. The job sends an
+  untrusted diff to a provider. Inherited secrets hand every repository secret
+  to that path.
+- Fork pull requests receive no secrets from GitHub. The fork skip needs no
+  adopter action when the caller mirrors `security-review-pr.yml`.
+
+### Verify the wiring
+
+Open a documentation-only pull request in the adopter repository. The review
+posts an `APPROVE` comment on the pull request. A missing comment after a few
+minutes means the run failed. Find the `security-review-pr` run under the
+default branch in the Actions tab. `workflow_run` runs do not appear on the
+pull request branch.
+
 ## Provider configuration
 
 `ci/model_providers.json` contains the active provider and its reviewed

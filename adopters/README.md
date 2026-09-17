@@ -3,6 +3,7 @@
 Records of repositories that load `AUDIT.md` as an audit agent's system
 prompt, or wire the reference `.github/workflows/security-review.yml`.
 Mirrors the `adopters/<repo>.md` convention from `abuzucom/agents`.
+See `docs/pr-security-review.md` for the wiring steps.
 
 ## Recording an adoption
 
