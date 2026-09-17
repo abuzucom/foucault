@@ -11,16 +11,23 @@ report with a machine-readable verdict. The workflow fails on `BLOCK` or
 1. GitHub starts `immutable-conflict-check.yml` for the pull request event.
 2. GitHub starts `security-review-pr.yml` after that workflow completes.
 3. The trusted workflow-run caller resolves the pull request from `head_sha`.
+   The caller skips the review when a completed `security-review` check run
+   with a verdict already exists for that revision.
 4. The caller checks whether the head repository matches the base repository.
 5. A same-repository pull request calls `security-review.yml`.
-6. A fork pull request runs the fork skip job. The skip job receives no secret.
-7. The reusable workflow checks out the base commit.
-8. The workflow fetches the head object without checking it out.
-9. One diff and one review envelope are created.
-10. `ci/run_model_command.py` validates the adapter command without a shell.
-11. `ci/call_model.py` sends one request to the active provider.
-12. The workflow validates the report and posts a fenced comment.
-13. The final verdict controls the check result.
+6. The reusable review job allows one active model review per pull request.
+   A newer head cancels an obsolete in-progress review.
+7. A fork pull request runs the fork skip job. The skip job receives no secret.
+8. The reusable workflow checks out the base commit.
+9. The workflow fetches the head object without checking it out.
+10. One diff and one review envelope are created.
+11. `ci/run_model_command.py` validates the adapter command without a shell.
+12. `ci/call_model.py` sends one request to the active provider.
+13. The workflow validates the report and posts a fenced comment. The comment
+    identifies its base commit, head commit, and workflow run.
+14. The final verdict controls the check result.
+15. The workflow publishes a `security-review` check run on the pull request
+    head.
 
 ## Trust boundary
 
@@ -120,7 +127,7 @@ endpoint, protocol, model, and output limit. The adapter accepts only the four
 exact endpoints in the endpoint allowlist. Endpoint aliases and arbitrary URLs do
 not pass validation.
 
-The initial profile uses Ollama and `gpt-oss:20b`. The caller maps the
+The active profile uses Ollama and `kimi-k2.7-code`. The caller maps the
 provider-specific repository secret to `MODEL_API_KEY`:
 
 ```yaml
@@ -184,7 +191,7 @@ The following conditions fail the job:
 - unknown provider or endpoint;
 - invalid provider response;
 - provider timeout or exhausted retry;
-- missing or malformed `VERDICT` line;
+- missing or malformed `VERDICT` line after one retry;
 - missing or mismatched `VERDICT_JSON` block;
 - `BLOCK` verdict;
 - `NEEDS-HUMAN` verdict when `fail_on_block` is true.

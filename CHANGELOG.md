@@ -6,12 +6,60 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
-## [3.2.4] (2026-09-17)
+## [3.3.8] (2026-09-17)
 
 ### Added
 
 - Documented the adopter wiring for the pull request security review in
   `docs/pr-security-review.md`.
+
+## [3.3.7] (2026-09-17)
+
+### Fixed
+
+- Canceled obsolete in-progress model reviews after a newer head reaches the
+  same pull request. Added base, head, and workflow-run metadata to review
+  comments and head metadata to review check summaries.
+
+## [3.3.6] (2026-09-17)
+
+### Fixed
+
+- Skipped duplicate model calls for an already-reviewed head revision. The
+  caller cancels parallel runs for one head and skips the review when a
+  completed check run with a verdict exists for it.
+
+## [3.3.3] (2026-09-17)
+
+### Fixed
+
+- Retried the model call once when the first response fails structure
+  validation. Logged only the validator's structural error on final failure.
+
+## [3.3.2] (2026-09-17)
+
+### Fixed
+
+- Retried the model call once when the first response fails structure
+  validation. Logged a bounded response tail on a final validation failure.
+
+## [3.3.0] (2026-09-17)
+
+### Added
+
+- Published the review result as a `security-review` check run on the pull
+  request head. The review now appears in the pull request checks box. The
+  summary sanitizes the model-influenced verdict line. The publication
+  carries a timeout and one retry. A publication failure after a successful
+  review logs a warning and keeps the job green.
+
+## [3.2.4] (2026-09-17)
+
+### Fixed
+
+- Switched the active review model to `kimi-k2.7-code` and raised the output
+  budget to 16384 tokens. `gpt-oss:20b` returned empty or malformed responses
+  on two of three review runs.
 
 ## [3.2.3] (2026-09-17)
 

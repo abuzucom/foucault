@@ -74,7 +74,11 @@ on:
 jobs:
   review:
     runs-on: ubuntu-latest
+    concurrency:
+      group: security-review-pr-${{ inputs.pr_number }}
+      cancel-in-progress: true
     permissions:
+      checks: write
       contents: read
       pull-requests: write
     steps:
@@ -255,9 +259,21 @@ jobs:
         run: |
           set -euo pipefail
           python3 ci/run_model_command.py "$MODEL_CALL_COMMAND" > response.txt
+          if ! python3 scripts/check_pr_review_response.py response.txt > /dev/null; then
+            echo "first response failed validation; one retry" >&2
+            python3 ci/run_model_command.py "$MODEL_CALL_COMMAND" > response.txt
+          fi
 
       - name: Validate report structure
-        run: python3 scripts/check_pr_review_response.py response.txt
+        run: |
+          set -euo pipefail
+          if ! validation_error="$(
+            python3 scripts/check_pr_review_response.py response.txt 2>&1 > /dev/null
+          )"; then
+            echo "final response failed structural validation:" >&2
+            printf '%s\n' "$validation_error" >&2
+            exit 1
+          fi
 
       - name: Parse verdict
         id: verdict
@@ -327,6 +343,9 @@ jobs:
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}
+          BASE_SHA: ${{ steps.resolve.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         with:
           script: |
             const fs = require('fs');
@@ -338,7 +357,14 @@ jobs:
             const runs = raw.match(/`+/g) || [];
             const longest = runs.reduce((n, s) => Math.max(n, s.length), 0);
             const fence = '`'.repeat(Math.max(3, longest + 1));
-            const body = `${fence}\n${raw}\n${fence}`;
+            const metadata = [
+              "Security review metadata",
+              `- Head: \`${process.env.HEAD_SHA}\``,
+              `- Base: \`${process.env.BASE_SHA}\``,
+              `- Workflow run: ${process.env.RUN_URL}`,
+              "",
+            ].join("\n");
+            const body = `${metadata}${fence}\n${raw}\n${fence}`;
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -353,3 +379,64 @@ jobs:
         run: |
           echo "$VERDICT_LINE" >&2
           exit 1
+
+      - name: Publish check run
+        if: ${{ always() }}
+        timeout-minutes: 1
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
+          JOB_STATUS: ${{ job.status }}
+          VERDICT_LINE: ${{ steps.verdict.outputs.line }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            // The review executes on the default branch under workflow_run.
+            // Without a check run on the head revision the result never
+            // appears in the pull request checks box.
+            const conclusion = process.env.JOB_STATUS === "success"
+              ? "success"
+              : "failure";
+            // The verdict line is model output shaped by the pull request
+            // under review. Strip characters that could break the inline
+            // code span, and bound the length.
+            const sanitize = (value) =>
+              value.replace(/[`\\\x00-\x1f\x7f]/g, "").slice(0, 200);
+            const verdictLine = sanitize(process.env.VERDICT_LINE || "")
+              || "review failed before a verdict was produced";
+            const shortHeadSha = process.env.HEAD_SHA.slice(0, 12);
+            const request = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "security-review",
+              head_sha: process.env.HEAD_SHA,
+              status: "completed",
+              conclusion,
+              details_url: process.env.RUN_URL,
+              output: {
+                title: `security-review: ${conclusion}`,
+                summary: `Head ${shortHeadSha}: model review result: \`${verdictLine}\``,
+              },
+            };
+            let lastError = null;
+            for (let attempt = 0; attempt < 2; attempt++) {
+              try {
+                await github.rest.checks.create(request);
+                lastError = null;
+                break;
+              } catch (error) {
+                lastError = error;
+              }
+            }
+            if (lastError) {
+              if (conclusion === "success") {
+                // A publication flake must not mask a passed review. The
+                // warning stays in the run log and the comment carries the
+                // verdict.
+                core.warning(
+                  `check run publication failed: ${lastError.message}`
+                );
+              } else {
+                throw lastError;
+              }
+            }

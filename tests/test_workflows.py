@@ -14,6 +14,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CI_PATH = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 REVIEW_PATH = REPO_ROOT / ".github" / "workflows" / "security-review.yml"
+CALLER_PATH = REPO_ROOT / ".github" / "workflows" / "security-review-pr.yml"
 SHA_PIN_RE = re.compile(r"@[0-9a-f]{40}\b")
 SCRIPT_REF_RE = re.compile(r"scripts/\w+\.py")
 USES_LINE_RE = re.compile(r"^\s+uses:")
@@ -90,6 +91,117 @@ class InterpolationSafetyTest(unittest.TestCase):
                         self.assertNotIn(pattern, block)
 
 
+class ReviewDedupeTest(unittest.TestCase):
+    """One active model call per pull request.
+
+    Duplicate triggers for one head cancel. A head with a completed
+    verdict-carrying check run skips the review entirely.
+    """
+
+    def setUp(self):
+        self.caller = CALLER_PATH.read_text(encoding="utf-8")
+        self.review = REVIEW_PATH.read_text(encoding="utf-8")
+
+    def test_parallel_runs_for_one_head_cancel(self):
+        self.assertIn(
+            "security-review-${{ github.event.workflow_run.head_sha }}",
+            self.caller,
+        )
+        self.assertIn("cancel-in-progress: true", self.caller)
+
+    def test_review_job_cancels_obsolete_heads_for_one_pr(self):
+        self.assertIn(
+            "group: security-review-pr-${{ inputs.pr_number }}", self.review
+        )
+        self.assertIn("cancel-in-progress: true", self.review)
+
+    def test_completed_verdict_skips_the_review(self):
+        self.assertIn('check_name: "security-review"', self.caller)
+        self.assertIn("already_reviewed", self.caller)
+        self.assertIn("VERDICT: (APPROVE|BLOCK|NEEDS-HUMAN)", self.caller)
+
+    def test_review_job_honors_the_dedupe_output(self):
+        self.assertIn(
+            "needs.resolve-pr.outputs.already_reviewed != 'true'", self.caller
+        )
+
+
+class CheckRunVisibilityTest(unittest.TestCase):
+    """The review publishes a check run on the pull request head.
+
+    A workflow_run review executes on the default branch. Without a check
+    run on the head revision the result never appears in the pull request
+    checks box. Assertions scope to the publish step block so a matching
+    string elsewhere in the file cannot satisfy them. A JavaScript
+    execution harness would need a new dependency, so the assertions stay
+    text-level per the file convention.
+    """
+
+    def setUp(self):
+        self.review = REVIEW_PATH.read_text(encoding="utf-8")
+        self.caller = CALLER_PATH.read_text(encoding="utf-8")
+        self.step = self.review.split("name: Publish check run", 1)[1]
+
+    def test_review_job_grants_checks_write(self):
+        self.assertIn("checks: write", self.review)
+
+    def test_caller_grants_checks_write(self):
+        self.assertIn("checks: write", self.caller)
+
+    def test_check_run_targets_the_resolved_head(self):
+        self.assertIn("github.rest.checks.create", self.step)
+        self.assertIn("steps.resolve.outputs.head_sha", self.step)
+
+    def test_check_run_publishes_on_every_outcome(self):
+        self.assertIn("if: ${{ always() }}", self.step)
+
+    def test_summary_sanitizes_the_model_influenced_verdict(self):
+        self.assertIn("value.replace(", self.step)
+        self.assertIn("slice(0, 200)", self.step)
+
+    def test_summary_identifies_the_reviewed_head(self):
+        self.assertIn("shortHeadSha", self.step)
+
+    def test_publication_has_a_timeout_and_one_retry(self):
+        self.assertIn("timeout-minutes: 1", self.step)
+        self.assertIn("attempt < 2", self.step)
+
+    def test_publication_failure_does_not_mask_a_passed_review(self):
+        self.assertIn("core.warning(", self.step)
+
+
+class ResponseRetryTest(unittest.TestCase):
+    """A structurally invalid response earns one retry, not a failure."""
+
+    def setUp(self):
+        self.review = REVIEW_PATH.read_text(encoding="utf-8")
+        self.model_step = self.review.split("name: Run model call", 1)[1].split(
+            "name: Validate report structure", 1
+        )[0]
+        self.validation_step = self.review.split(
+            "name: Validate report structure", 1
+        )[1].split("name: Parse verdict", 1)[0]
+
+    def test_model_step_retries_once_on_invalid_response(self):
+        retry_pattern = (
+            r"if ! python3 scripts/check_pr_review_response\.py response\.txt "
+            r"> /dev/null; then\s+"
+            r"echo \"first response failed validation; one retry\" >&2\s+"
+            r"python3 ci/run_model_command\.py \"\$MODEL_CALL_COMMAND\" "
+            r"> response\.txt"
+        )
+        self.assertRegex(self.model_step, retry_pattern)
+        self.assertEqual(
+            self.model_step.count("python3 ci/run_model_command.py"), 2
+        )
+
+    def test_validation_failure_logs_only_structural_error(self):
+        self.assertIn("validation_error=", self.validation_step)
+        self.assertIn("failed structural validation", self.validation_step)
+        self.assertNotIn("tail -n 5", self.validation_step)
+        self.assertNotIn("cut -c1-500", self.validation_step)
+
+
 class CommentTargetTest(unittest.TestCase):
     """The review comment targets the resolved pull request number.
 
@@ -107,6 +219,11 @@ class CommentTargetTest(unittest.TestCase):
 
     def test_comment_step_reads_the_resolve_output(self):
         self.assertIn("PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}", self.step)
+
+    def test_comment_identifies_the_reviewed_revision(self):
+        self.assertIn("BASE_SHA: ${{ steps.resolve.outputs.base_sha }}", self.step)
+        self.assertIn("HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}", self.step)
+        self.assertIn("Workflow run:", self.step)
 
 
 class VerdictGateTest(unittest.TestCase):
