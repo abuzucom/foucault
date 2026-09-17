@@ -256,9 +256,21 @@ jobs:
         run: |
           set -euo pipefail
           python3 ci/run_model_command.py "$MODEL_CALL_COMMAND" > response.txt
+          if ! python3 scripts/check_pr_review_response.py response.txt > /dev/null; then
+            echo "first response failed validation; one retry" >&2
+            python3 ci/run_model_command.py "$MODEL_CALL_COMMAND" > response.txt
+          fi
 
       - name: Validate report structure
-        run: python3 scripts/check_pr_review_response.py response.txt
+        run: |
+          set -euo pipefail
+          if ! validation_error="$(
+            python3 scripts/check_pr_review_response.py response.txt 2>&1 > /dev/null
+          )"; then
+            echo "final response failed structural validation:" >&2
+            printf '%s\n' "$validation_error" >&2
+            exit 1
+          fi
 
       - name: Parse verdict
         id: verdict
