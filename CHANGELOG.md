@@ -32,6 +32,7 @@ loading `AUDIT.md` into a deployment.
   token, or cross-reference changed.
 - Pinned `AUDIT.md` to LF line endings in `.gitattributes`. The upstream
   convention stores LF only.
+- Refreshed the upstream drift manifest hash for `CHANGELOG.md`.
 
 ## [3.1.5] (2026-09-15)
 
