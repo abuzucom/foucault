@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.11"
+  ],
+  "expect_json": false,
+  "notes": "The server sets no depth or cost limit on a cyclic graph. User.friends loops back to User. One deeply nested query exhausts the resolver tier. The login mutation also batches by alias. A hundred aliased login attempts share one request and bypass per-request rate limiting (2.11). HIGH."
+}

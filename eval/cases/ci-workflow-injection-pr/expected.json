@@ -1,0 +1,10 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": [
+    "2.5",
+    "2.6"
+  ],
+  "expect_json": true,
+  "notes": "The workflow interpolates github.event.issue.title into two run steps. Any issue opener controls the title. The defect is shell command injection inside CI (2.5, from the section 3.6 sweep). The job also requests write-all permissions. The injected command runs with a token able to push code and alter the repository. Exploitable now by anyone who can open an issue. The PR blocks."
+}

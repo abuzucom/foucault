@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: MEDIUM",
+  "expected_classes": [
+    "2.11"
+  ],
+  "expect_json": false,
+  "notes": "The realpath prefix check handles traversal and keeps entries inside IMPORT_ROOT. Nothing caps the expanded size. A small crafted archive expands until the disk fills. Authenticated upload plus an availability impact lands MEDIUM (2.11)."
+}

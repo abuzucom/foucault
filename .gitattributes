@@ -2,6 +2,7 @@
 * text=auto
 
 # Keep policy inputs within the byte limit on every platform.
+AUDIT.md text eol=lf
 AGENTS.md text eol=lf
 CLAUDE.md text eol=lf
 GEMINI.md text eol=lf
