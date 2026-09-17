@@ -92,7 +92,7 @@ class InterpolationSafetyTest(unittest.TestCase):
 
 
 class ReviewDedupeTest(unittest.TestCase):
-    """One model call per head revision.
+    """One active model call per pull request.
 
     Duplicate triggers for one head cancel. A head with a completed
     verdict-carrying check run skips the review entirely.
@@ -100,6 +100,7 @@ class ReviewDedupeTest(unittest.TestCase):
 
     def setUp(self):
         self.caller = CALLER_PATH.read_text(encoding="utf-8")
+        self.review = REVIEW_PATH.read_text(encoding="utf-8")
 
     def test_parallel_runs_for_one_head_cancel(self):
         self.assertIn(
@@ -107,6 +108,12 @@ class ReviewDedupeTest(unittest.TestCase):
             self.caller,
         )
         self.assertIn("cancel-in-progress: true", self.caller)
+
+    def test_review_job_cancels_obsolete_heads_for_one_pr(self):
+        self.assertIn(
+            "group: security-review-pr-${{ inputs.pr_number }}", self.review
+        )
+        self.assertIn("cancel-in-progress: true", self.review)
 
     def test_completed_verdict_skips_the_review(self):
         self.assertIn('check_name: "security-review"', self.caller)
@@ -151,6 +158,9 @@ class CheckRunVisibilityTest(unittest.TestCase):
     def test_summary_sanitizes_the_model_influenced_verdict(self):
         self.assertIn("value.replace(", self.step)
         self.assertIn("slice(0, 200)", self.step)
+
+    def test_summary_identifies_the_reviewed_head(self):
+        self.assertIn("shortHeadSha", self.step)
 
     def test_publication_has_a_timeout_and_one_retry(self):
         self.assertIn("timeout-minutes: 1", self.step)
@@ -209,6 +219,11 @@ class CommentTargetTest(unittest.TestCase):
 
     def test_comment_step_reads_the_resolve_output(self):
         self.assertIn("PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}", self.step)
+
+    def test_comment_identifies_the_reviewed_revision(self):
+        self.assertIn("BASE_SHA: ${{ steps.resolve.outputs.base_sha }}", self.step)
+        self.assertIn("HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}", self.step)
+        self.assertIn("Workflow run:", self.step)
 
 
 class VerdictGateTest(unittest.TestCase):

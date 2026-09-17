@@ -15,15 +15,18 @@ report with a machine-readable verdict. The workflow fails on `BLOCK` or
    with a verdict already exists for that revision.
 4. The caller checks whether the head repository matches the base repository.
 5. A same-repository pull request calls `security-review.yml`.
-6. A fork pull request runs the fork skip job. The skip job receives no secret.
-7. The reusable workflow checks out the base commit.
-8. The workflow fetches the head object without checking it out.
-9. One diff and one review envelope are created.
-10. `ci/run_model_command.py` validates the adapter command without a shell.
-11. `ci/call_model.py` sends one request to the active provider.
-12. The workflow validates the report and posts a fenced comment.
-13. The final verdict controls the check result.
-14. The workflow publishes a `security-review` check run on the pull request
+6. The reusable review job allows one active model review per pull request.
+   A newer head cancels an obsolete in-progress review.
+7. A fork pull request runs the fork skip job. The skip job receives no secret.
+8. The reusable workflow checks out the base commit.
+9. The workflow fetches the head object without checking it out.
+10. One diff and one review envelope are created.
+11. `ci/run_model_command.py` validates the adapter command without a shell.
+12. `ci/call_model.py` sends one request to the active provider.
+13. The workflow validates the report and posts a fenced comment. The comment
+    identifies its base commit, head commit, and workflow run.
+14. The final verdict controls the check result.
+15. The workflow publishes a `security-review` check run on the pull request
     head.
 
 ## Trust boundary
