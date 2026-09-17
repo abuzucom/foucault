@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.3.0] (2026-09-17)
+
+### Added
+
+- Published the review result as a `security-review` check run on the pull
+  request head. The review now appears in the pull request checks box. The
+  summary sanitizes the model-influenced verdict line. The publication
+  carries a timeout and one retry. A publication failure after a successful
+  review logs a warning and keeps the job green.
+
 ## [3.2.4] (2026-09-17)
 
 ### Fixed
