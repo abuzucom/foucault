@@ -119,7 +119,7 @@ The following conditions fail the job:
 - unknown provider or endpoint;
 - invalid provider response;
 - provider timeout or exhausted retry;
-- missing or malformed `VERDICT` line;
+- missing or malformed `VERDICT` line after one retry;
 - missing or mismatched `VERDICT_JSON` block;
 - `BLOCK` verdict;
 - `NEEDS-HUMAN` verdict when `fail_on_block` is true.
