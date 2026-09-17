@@ -14,6 +14,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CI_PATH = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 REVIEW_PATH = REPO_ROOT / ".github" / "workflows" / "security-review.yml"
+CALLER_PATH = REPO_ROOT / ".github" / "workflows" / "security-review-pr.yml"
 SHA_PIN_RE = re.compile(r"@[0-9a-f]{40}\b")
 SCRIPT_REF_RE = re.compile(r"scripts/\w+\.py")
 USES_LINE_RE = re.compile(r"^\s+uses:")
@@ -88,6 +89,32 @@ class InterpolationSafetyTest(unittest.TestCase):
                 for pattern in PR_INTERPOLATION_PATTERNS:
                     with self.subTest(file=path.name, pattern=pattern):
                         self.assertNotIn(pattern, block)
+
+
+class CheckRunVisibilityTest(unittest.TestCase):
+    """The review publishes a check run on the pull request head.
+
+    A workflow_run review executes on the default branch. Without a check
+    run on the head revision the result never appears in the pull request
+    checks box.
+    """
+
+    def setUp(self):
+        self.review = REVIEW_PATH.read_text(encoding="utf-8")
+        self.caller = CALLER_PATH.read_text(encoding="utf-8")
+
+    def test_review_job_grants_checks_write(self):
+        self.assertIn("checks: write", self.review)
+
+    def test_caller_grants_checks_write(self):
+        self.assertIn("checks: write", self.caller)
+
+    def test_check_run_targets_the_resolved_head(self):
+        self.assertIn("github.rest.checks.create", self.review)
+        self.assertIn("steps.resolve.outputs.head_sha", self.review)
+
+    def test_check_run_publishes_on_every_outcome(self):
+        self.assertIn("if: ${{ always() }}", self.review)
 
 
 class CommentTargetTest(unittest.TestCase):

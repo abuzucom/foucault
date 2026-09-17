@@ -75,6 +75,7 @@ jobs:
   review:
     runs-on: ubuntu-latest
     permissions:
+      checks: write
       contents: read
       pull-requests: write
     steps:
@@ -353,3 +354,35 @@ jobs:
         run: |
           echo "$VERDICT_LINE" >&2
           exit 1
+
+      - name: Publish check run
+        if: ${{ always() }}
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
+          JOB_STATUS: ${{ job.status }}
+          VERDICT_LINE: ${{ steps.verdict.outputs.line }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            // The review executes on the default branch under workflow_run.
+            // Without a check run on the head revision the result never
+            // appears in the pull request checks box.
+            const conclusion = process.env.JOB_STATUS === "success"
+              ? "success"
+              : "failure";
+            const verdictLine = process.env.VERDICT_LINE
+              || "review failed before a verdict was produced";
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "security-review",
+              head_sha: process.env.HEAD_SHA,
+              status: "completed",
+              conclusion,
+              details_url: process.env.RUN_URL,
+              output: {
+                title: `security-review: ${conclusion}`,
+                summary: `Model review result: \`${verdictLine}\``,
+              },
+            });

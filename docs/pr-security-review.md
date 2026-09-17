@@ -21,6 +21,8 @@ report with a machine-readable verdict. The workflow fails on `BLOCK` or
 11. `ci/call_model.py` sends one request to the active provider.
 12. The workflow validates the report and posts a fenced comment.
 13. The final verdict controls the check result.
+14. The workflow publishes a `security-review` check run on the pull request
+    head.
 
 ## Trust boundary
 
