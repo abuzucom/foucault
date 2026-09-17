@@ -90,6 +90,25 @@ class InterpolationSafetyTest(unittest.TestCase):
                         self.assertNotIn(pattern, block)
 
 
+class CommentTargetTest(unittest.TestCase):
+    """The review comment targets the resolved pull request number.
+
+    A workflow_run event carries no context.issue payload. Reading
+    context.issue.number posts to issues//comments and 404s.
+    """
+
+    def setUp(self):
+        text = REVIEW_PATH.read_text(encoding="utf-8")
+        self.step = text.split("name: Post PR comment", 1)[1]
+
+    def test_comment_uses_the_resolved_pr_number(self):
+        self.assertIn("process.env.PR_NUMBER", self.step)
+        self.assertNotIn("context.issue.number", self.step)
+
+    def test_comment_step_reads_the_resolve_output(self):
+        self.assertIn("PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}", self.step)
+
+
 class VerdictGateTest(unittest.TestCase):
     """The merge gate reads the report's own verdict and holds on doubt."""
 
