@@ -11,6 +11,8 @@ report with a machine-readable verdict. The workflow fails on `BLOCK` or
 1. GitHub starts `immutable-conflict-check.yml` for the pull request event.
 2. GitHub starts `security-review-pr.yml` after that workflow completes.
 3. The trusted workflow-run caller resolves the pull request from `head_sha`.
+   The caller skips the review when a completed `security-review` check run
+   with a verdict already exists for that revision.
 4. The caller checks whether the head repository matches the base repository.
 5. A same-repository pull request calls `security-review.yml`.
 6. A fork pull request runs the fork skip job. The skip job receives no secret.

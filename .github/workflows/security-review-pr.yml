@@ -5,7 +5,12 @@ on:
     workflows: [Immutable Compliance]
     types: [completed]
 
+concurrency:
+  group: security-review-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
 permissions:
+  checks: write
   contents: read
   pull-requests: write
 
@@ -14,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       same_repository: ${{ steps.resolve.outputs.same_repository }}
+      already_reviewed: ${{ steps.resolve.outputs.already_reviewed }}
       pr_number: ${{ steps.resolve.outputs.pr_number }}
       base_sha: ${{ steps.resolve.outputs.base_sha }}
       head_sha: ${{ steps.resolve.outputs.head_sha }}
@@ -60,6 +66,25 @@ jobs:
               core.setFailed("pull request head repository metadata is unavailable");
               return;
             }
+
+            // One model call per head revision. A completed check run carrying
+            // a verdict means this head was already reviewed. A failed run
+            // carries no verdict, so a flaky review still retries.
+            const checkRuns = await github.paginate(
+              github.rest.checks.listForRef,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: headSha,
+                check_name: "security-review",
+                per_page: 100,
+              },
+            );
+            const alreadyReviewed = checkRuns.some((run) =>
+              run.status === "completed" &&
+              (run.output?.summary || "").includes("VERDICT:")
+            );
+            core.setOutput("already_reviewed", alreadyReviewed ? "true" : "false");
             core.setOutput(
               "same_repository",
               headRepository.full_name.toLowerCase() === baseRepository.toLowerCase()
@@ -74,7 +99,7 @@ jobs:
 
   review:
     needs: resolve-pr
-    if: needs.resolve-pr.result == 'success' && needs.resolve-pr.outputs.same_repository == 'true'
+    if: needs.resolve-pr.result == 'success' && needs.resolve-pr.outputs.same_repository == 'true' && needs.resolve-pr.outputs.already_reviewed != 'true'
     uses: ./.github/workflows/security-review.yml
     with:
       # Foucault 3.0.2 policy revision.

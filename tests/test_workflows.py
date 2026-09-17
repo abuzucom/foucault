@@ -14,6 +14,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CI_PATH = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 REVIEW_PATH = REPO_ROOT / ".github" / "workflows" / "security-review.yml"
+CALLER_PATH = REPO_ROOT / ".github" / "workflows" / "security-review-pr.yml"
 SHA_PIN_RE = re.compile(r"@[0-9a-f]{40}\b")
 SCRIPT_REF_RE = re.compile(r"scripts/\w+\.py")
 USES_LINE_RE = re.compile(r"^\s+uses:")
@@ -88,6 +89,34 @@ class InterpolationSafetyTest(unittest.TestCase):
                 for pattern in PR_INTERPOLATION_PATTERNS:
                     with self.subTest(file=path.name, pattern=pattern):
                         self.assertNotIn(pattern, block)
+
+
+class ReviewDedupeTest(unittest.TestCase):
+    """One model call per head revision.
+
+    Duplicate triggers for one head cancel. A head with a completed
+    verdict-carrying check run skips the review entirely.
+    """
+
+    def setUp(self):
+        self.caller = CALLER_PATH.read_text(encoding="utf-8")
+
+    def test_parallel_runs_for_one_head_cancel(self):
+        self.assertIn(
+            "security-review-${{ github.event.workflow_run.head_sha }}",
+            self.caller,
+        )
+        self.assertIn("cancel-in-progress: true", self.caller)
+
+    def test_completed_verdict_skips_the_review(self):
+        self.assertIn('check_name: "security-review"', self.caller)
+        self.assertIn("already_reviewed", self.caller)
+        self.assertIn('includes("VERDICT:")', self.caller)
+
+    def test_review_job_honors_the_dedupe_output(self):
+        self.assertIn(
+            "needs.resolve-pr.outputs.already_reviewed != 'true'", self.caller
+        )
 
 
 class CommentTargetTest(unittest.TestCase):
