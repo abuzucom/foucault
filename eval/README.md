@@ -153,3 +153,5 @@ rule instead (`clean-*` cases), never copied from a real system.
 | `prototype-pollution-file` | File | 2.5, merge helper copying `__proto__` from a request body |
 | `graphql-limits-file` | File | 2.11, no depth limit and aliased login mutations |
 | `decompression-bomb-file` | File | 2.11, archive extracted with no expansion cap |
+| `ambiguous-hook-provenance-pr` | PR | section 7, missing provenance escalates to NEEDS-HUMAN |
+| `policy-reinjection-hook-pr` | PR | section 8, repo-controlled policy reinjection is not a finding |
