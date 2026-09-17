@@ -51,7 +51,7 @@ are unavailable to them.
 immutable `AUDIT.md` revision, calls the configured provider adapter, posts a
 fenced report, and gates on the final `VERDICT` line. The adapter reads the
 provider profile from [`ci/model_providers.json`](ci/model_providers.json).
-The initial profile uses Ollama with `gpt-oss:20b`.
+The active profile uses Ollama with `kimi-k2.7-code`.
 
 The caller maps one provider-specific repository secret, such as
 `OLLAMA_API_KEY`, to the reusable workflow's `MODEL_API_KEY` secret. Provider

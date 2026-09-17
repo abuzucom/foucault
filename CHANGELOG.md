@@ -13,6 +13,14 @@ loading `AUDIT.md` into a deployment.
 - Published the review result as a `security-review` check run on the pull
   request head. The review now appears in the pull request checks box.
 
+## [3.2.4] (2026-09-17)
+
+### Fixed
+
+- Switched the active review model to `kimi-k2.7-code` and raised the output
+  budget to 16384 tokens. `gpt-oss:20b` returned empty or malformed responses
+  on two of three review runs.
+
 ## [3.2.3] (2026-09-17)
 
 ### Fixed
