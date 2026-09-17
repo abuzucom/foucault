@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.5"
+  ],
+  "expect_json": false,
+  "notes": "deepMerge copies every key from the request body. A key named __proto__ or constructor reaches the prototype through the bracket assignment. A body of {\"__proto__\":{\"isAdmin\":true}} then poisons Object.prototype for the process. Later property checks elsewhere pass or fail on the poisoned value. Authorization bypass potential makes this HIGH (2.5)."
+}

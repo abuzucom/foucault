@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.4"
+  ],
+  "expect_json": false,
+  "notes": "The reset URL comes from the request Host header. An attacker triggers a reset for the victim and supplies an attacker-controlled Host. The emailed link then carries the victim token to the attacker domain. Account takeover with a realistic precondition (2.4). HIGH."
+}

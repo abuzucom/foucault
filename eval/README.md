@@ -142,3 +142,14 @@ rule instead (`clean-*` cases), never copied from a real system.
 | `distributed-lock-pr` | PR | 2.9, scheduled job without a single executor |
 | `authz-sweep-wholesale` | Wholesale | section 3, one route of four missing its guard |
 | `inapplicable-classes-file` | File | section 3 step 0, classes that do not apply are not findings |
+| `dependency-confusion-file` | File | 2.1, internal-sounding package name on a public registry |
+| `install-script-pr` | PR | 2.1, download-and-execute in a postinstall script |
+| `webhook-no-signature-file` | File | 2.4, payment events acted on without signature verification |
+| `websocket-no-origin-file` | File | 2.4, no Origin check and no per-message authorization |
+| `csv-formula-injection-file` | File | 2.5, user fields exported into spreadsheet formulas |
+| `ci-workflow-injection-pr` | PR | 2.5/2.6, issue title interpolated into a run step with a write-all token |
+| `contradictory-logic-file` | File | 2.13, guard placed after the use and a state re-tested after an earlier check ruled it out |
+| `host-header-reset-file` | File | 2.4, reset link built from the request Host header |
+| `prototype-pollution-file` | File | 2.5, merge helper copying `__proto__` from a request body |
+| `graphql-limits-file` | File | 2.11, no depth limit and aliased login mutations |
+| `decompression-bomb-file` | File | 2.11, archive extracted with no expansion cap |

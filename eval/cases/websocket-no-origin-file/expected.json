@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.4"
+  ],
+  "expect_json": false,
+  "notes": "The upgrade authenticates by cookie but never validates Origin. Any web page can open a connection riding the victim's cookies (cross-site WebSocket hijacking). The history message then returns chat.historyFor(msg.channelId) with no per-message authorization check. Any connected user reads any channel. Both failures are 2.4. The pair is HIGH."
+}

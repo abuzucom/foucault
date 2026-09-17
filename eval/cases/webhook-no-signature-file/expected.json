@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.4"
+  ],
+  "expect_json": false,
+  "notes": "The handler acts on payment events with no provider signature verification over the raw body. Anyone who can reach the route can POST a forged payment_succeeded that marks an order paid, or forge a subscription activation. Missing webhook authentication is HIGH. Exploitation needs no special access."
+}

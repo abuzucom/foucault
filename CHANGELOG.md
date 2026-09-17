@@ -6,6 +6,33 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.2.0] (2026-09-16)
+
+### Added
+
+- `AUDIT.md` rules: dependency confusion and install-time download-and-execute
+  (2.1), webhook signature verification, WebSocket upgrade, Origin, and
+  per-message authorization, and host-header link trust (2.4), spreadsheet
+  formula injection and prototype pollution (2.5), CI run-step interpolation
+  of untrusted context (step 3.6), contradictory or impossible logic with
+  precondition ordering (2.13), and GraphQL depth and decompression limits
+  (2.11).
+- Eleven eval cases covering the new rules: `dependency-confusion-file`,
+  `install-script-pr`, `webhook-no-signature-file`,
+  `websocket-no-origin-file`, `csv-formula-injection-file`,
+  `ci-workflow-injection-pr`, `contradictory-logic-file`,
+  `host-header-reset-file`, `prototype-pollution-file`,
+  `graphql-limits-file`, `decompression-bomb-file`.
+
+### Changed
+
+- Compressed `AUDIT.md` prose without altering any rule. The freed budget funds
+  the new content under the 32768-character ceiling.
+- Rewrote `AUDIT.md` prose into single-clause sentences. No rule, verdict
+  token, or cross-reference changed.
+- Pinned `AUDIT.md` to LF line endings in `.gitattributes`. The upstream
+  convention stores LF only.
+
 ## [3.1.5] (2026-09-15)
 
 ### Fixed

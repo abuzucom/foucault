@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.1"
+  ],
+  "expect_json": false,
+  "notes": "acme-billing-utils names an internal-sounding package that Acme does not publish. Whoever registers the name on the public registry first owns every build that installs it (dependency confusion). The pin does not help. The pinned version still resolves against the public registry. The other entries carry pins and look unremarkable."
+}

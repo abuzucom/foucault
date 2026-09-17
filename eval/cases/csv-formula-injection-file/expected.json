@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: HIGH",
+  "expected_classes": [
+    "2.5"
+  ],
+  "expect_json": false,
+  "notes": "Customer-controlled name and notes fields pass verbatim into a CSV export. A value starting with =, +, -, or @ executes as a formula when an analyst opens the export in a spreadsheet (CWE-1236). Impact reaches code execution on the analyst machine. The precondition is realistic. Exports exist for analysts to open."
+}

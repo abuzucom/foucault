@@ -1,0 +1,9 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": [
+    "2.1"
+  ],
+  "expect_json": true,
+  "notes": "The new postinstall script pipes a fetched script into a shell. The fetched payload stays unreviewed, can change after merge, and executes with the installer's credentials on every contributor machine and CI run. Download-and-execute at install time is a supply-chain code-execution path (2.1) and rates at least HIGH. The PR blocks."
+}

@@ -1,0 +1,9 @@
+{
+  "mode": "File",
+  "expected_verdict": "RISK: MEDIUM",
+  "expected_classes": [
+    "2.13"
+  ],
+  "expect_json": false,
+  "notes": "Two ordering defects. coupon_code dereferences user.profile.coupon before the None checks that guard it. A profile-less user crashes the path before the guard runs. The precondition sits after the use. shipping_fee tests weight_kg < 0 after the <= 0 raise already ruled that state out. The branch never executes. The zero-weight handling the author believed in lives nowhere. Correctness and availability hazards without a demonstrated integrity impact. MEDIUM per section 1.7."
+}
