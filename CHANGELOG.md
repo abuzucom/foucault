@@ -6,7 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
-## [3.3.4] (2026-09-17)
+## [3.3.5] (2026-09-17)
+
+### Fixed
+
+- Retried the model call once when the first response fails structure
+  validation. Logged only the validator's structural error on final failure.
+
+## [3.3.3] (2026-09-17)
 
 ### Fixed
 
