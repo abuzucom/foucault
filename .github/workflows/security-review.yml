@@ -403,5 +403,14 @@ jobs:
               }
             }
             if (lastError) {
-              throw lastError;
+              if (conclusion === "success") {
+                // A publication flake must not mask a passed review. The
+                // warning stays in the run log and the comment carries the
+                // verdict.
+                core.warning(
+                  `check run publication failed: ${lastError.message}`
+                );
+              } else {
+                throw lastError;
+              }
             }

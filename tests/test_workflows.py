@@ -128,6 +128,9 @@ class CheckRunVisibilityTest(unittest.TestCase):
         self.assertIn("timeout-minutes: 1", self.step)
         self.assertIn("attempt < 2", self.step)
 
+    def test_publication_failure_does_not_mask_a_passed_review(self):
+        self.assertIn("core.warning(", self.step)
+
 
 class CommentTargetTest(unittest.TestCase):
     """The review comment targets the resolved pull request number.

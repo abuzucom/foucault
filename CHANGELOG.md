@@ -13,7 +13,8 @@ loading `AUDIT.md` into a deployment.
 - Published the review result as a `security-review` check run on the pull
   request head. The review now appears in the pull request checks box. The
   summary sanitizes the model-influenced verdict line. The publication
-  carries a timeout and one retry.
+  carries a timeout and one retry. A publication failure after a successful
+  review logs a warning and keeps the job green.
 
 ## [3.2.4] (2026-09-17)
 
