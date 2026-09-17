@@ -132,6 +132,19 @@ class CheckRunVisibilityTest(unittest.TestCase):
         self.assertIn("core.warning(", self.step)
 
 
+class ResponseRetryTest(unittest.TestCase):
+    """A structurally invalid response earns one retry, not a failure."""
+
+    def setUp(self):
+        self.review = REVIEW_PATH.read_text(encoding="utf-8")
+
+    def test_model_step_retries_once_on_invalid_response(self):
+        self.assertIn("one retry", self.review)
+
+    def test_validation_failure_logs_a_bounded_tail(self):
+        self.assertIn("tail -n 5", self.review)
+
+
 class CommentTargetTest(unittest.TestCase):
     """The review comment targets the resolved pull request number.
 
