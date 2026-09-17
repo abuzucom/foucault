@@ -111,12 +111,53 @@ class ReviewDedupeTest(unittest.TestCase):
     def test_completed_verdict_skips_the_review(self):
         self.assertIn('check_name: "security-review"', self.caller)
         self.assertIn("already_reviewed", self.caller)
-        self.assertIn('includes("VERDICT:")', self.caller)
+        self.assertIn("VERDICT: (APPROVE|BLOCK|NEEDS-HUMAN)", self.caller)
 
     def test_review_job_honors_the_dedupe_output(self):
         self.assertIn(
             "needs.resolve-pr.outputs.already_reviewed != 'true'", self.caller
         )
+
+
+class CheckRunVisibilityTest(unittest.TestCase):
+    """The review publishes a check run on the pull request head.
+
+    A workflow_run review executes on the default branch. Without a check
+    run on the head revision the result never appears in the pull request
+    checks box. Assertions scope to the publish step block so a matching
+    string elsewhere in the file cannot satisfy them. A JavaScript
+    execution harness would need a new dependency, so the assertions stay
+    text-level per the file convention.
+    """
+
+    def setUp(self):
+        self.review = REVIEW_PATH.read_text(encoding="utf-8")
+        self.caller = CALLER_PATH.read_text(encoding="utf-8")
+        self.step = self.review.split("name: Publish check run", 1)[1]
+
+    def test_review_job_grants_checks_write(self):
+        self.assertIn("checks: write", self.review)
+
+    def test_caller_grants_checks_write(self):
+        self.assertIn("checks: write", self.caller)
+
+    def test_check_run_targets_the_resolved_head(self):
+        self.assertIn("github.rest.checks.create", self.step)
+        self.assertIn("steps.resolve.outputs.head_sha", self.step)
+
+    def test_check_run_publishes_on_every_outcome(self):
+        self.assertIn("if: ${{ always() }}", self.step)
+
+    def test_summary_sanitizes_the_model_influenced_verdict(self):
+        self.assertIn("value.replace(", self.step)
+        self.assertIn("slice(0, 200)", self.step)
+
+    def test_publication_has_a_timeout_and_one_retry(self):
+        self.assertIn("timeout-minutes: 1", self.step)
+        self.assertIn("attempt < 2", self.step)
+
+    def test_publication_failure_does_not_mask_a_passed_review(self):
+        self.assertIn("core.warning(", self.step)
 
 
 class CommentTargetTest(unittest.TestCase):

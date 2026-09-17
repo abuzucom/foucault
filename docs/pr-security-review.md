@@ -23,6 +23,8 @@ report with a machine-readable verdict. The workflow fails on `BLOCK` or
 11. `ci/call_model.py` sends one request to the active provider.
 12. The workflow validates the report and posts a fenced comment.
 13. The final verdict controls the check result.
+14. The workflow publishes a `security-review` check run on the pull request
+    head.
 
 ## Trust boundary
 
@@ -53,7 +55,7 @@ endpoint, protocol, model, and output limit. The adapter accepts only the four
 exact endpoints in the endpoint allowlist. Endpoint aliases and arbitrary URLs do
 not pass validation.
 
-The initial profile uses Ollama and `gpt-oss:20b`. The caller maps the
+The active profile uses Ollama and `kimi-k2.7-code`. The caller maps the
 provider-specific repository secret to `MODEL_API_KEY`:
 
 ```yaml

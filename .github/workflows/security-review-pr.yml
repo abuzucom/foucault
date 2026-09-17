@@ -82,7 +82,9 @@ jobs:
             );
             const alreadyReviewed = checkRuns.some((run) =>
               run.status === "completed" &&
-              (run.output?.summary || "").includes("VERDICT:")
+              /VERDICT: (APPROVE|BLOCK|NEEDS-HUMAN)\b/.test(
+                run.output?.summary || ""
+              )
             );
             core.setOutput("already_reviewed", alreadyReviewed ? "true" : "false");
             core.setOutput(

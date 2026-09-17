@@ -75,6 +75,7 @@ jobs:
   review:
     runs-on: ubuntu-latest
     permissions:
+      checks: write
       contents: read
       pull-requests: write
     steps:
@@ -353,3 +354,63 @@ jobs:
         run: |
           echo "$VERDICT_LINE" >&2
           exit 1
+
+      - name: Publish check run
+        if: ${{ always() }}
+        timeout-minutes: 1
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
+          JOB_STATUS: ${{ job.status }}
+          VERDICT_LINE: ${{ steps.verdict.outputs.line }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            // The review executes on the default branch under workflow_run.
+            // Without a check run on the head revision the result never
+            // appears in the pull request checks box.
+            const conclusion = process.env.JOB_STATUS === "success"
+              ? "success"
+              : "failure";
+            // The verdict line is model output shaped by the pull request
+            // under review. Strip characters that could break the inline
+            // code span, and bound the length.
+            const sanitize = (value) =>
+              value.replace(/[`\\\x00-\x1f\x7f]/g, "").slice(0, 200);
+            const verdictLine = sanitize(process.env.VERDICT_LINE || "")
+              || "review failed before a verdict was produced";
+            const request = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "security-review",
+              head_sha: process.env.HEAD_SHA,
+              status: "completed",
+              conclusion,
+              details_url: process.env.RUN_URL,
+              output: {
+                title: `security-review: ${conclusion}`,
+                summary: `Model review result: \`${verdictLine}\``,
+              },
+            };
+            let lastError = null;
+            for (let attempt = 0; attempt < 2; attempt++) {
+              try {
+                await github.rest.checks.create(request);
+                lastError = null;
+                break;
+              } catch (error) {
+                lastError = error;
+              }
+            }
+            if (lastError) {
+              if (conclusion === "success") {
+                // A publication flake must not mask a passed review. The
+                // warning stays in the run log and the comment carries the
+                // verdict.
+                core.warning(
+                  `check run publication failed: ${lastError.message}`
+                );
+              } else {
+                throw lastError;
+              }
+            }
