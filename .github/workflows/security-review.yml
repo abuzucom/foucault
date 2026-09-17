@@ -264,9 +264,11 @@ jobs:
       - name: Validate report structure
         run: |
           set -euo pipefail
-          if ! python3 scripts/check_pr_review_response.py response.txt; then
-            echo "final response tail:" >&2
-            tail -n 5 response.txt | tr -d '\000-\010\013\014\016-\037\177' | cut -c1-500 >&2
+          if ! validation_error="$(
+            python3 scripts/check_pr_review_response.py response.txt 2>&1 > /dev/null
+          )"; then
+            echo "final response failed structural validation:" >&2
+            printf '%s\n' "$validation_error" >&2
             exit 1
           fi
 

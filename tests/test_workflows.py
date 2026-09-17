@@ -137,12 +137,31 @@ class ResponseRetryTest(unittest.TestCase):
 
     def setUp(self):
         self.review = REVIEW_PATH.read_text(encoding="utf-8")
+        self.model_step = self.review.split("name: Run model call", 1)[1].split(
+            "name: Validate report structure", 1
+        )[0]
+        self.validation_step = self.review.split(
+            "name: Validate report structure", 1
+        )[1].split("name: Parse verdict", 1)[0]
 
     def test_model_step_retries_once_on_invalid_response(self):
-        self.assertIn("one retry", self.review)
+        retry_pattern = (
+            r"if ! python3 scripts/check_pr_review_response\.py response\.txt "
+            r"> /dev/null; then\s+"
+            r"echo \"first response failed validation; one retry\" >&2\s+"
+            r"python3 ci/run_model_command\.py \"\$MODEL_CALL_COMMAND\" "
+            r"> response\.txt"
+        )
+        self.assertRegex(self.model_step, retry_pattern)
+        self.assertEqual(
+            self.model_step.count("python3 ci/run_model_command.py"), 2
+        )
 
-    def test_validation_failure_logs_a_bounded_tail(self):
-        self.assertIn("tail -n 5", self.review)
+    def test_validation_failure_logs_only_structural_error(self):
+        self.assertIn("validation_error=", self.validation_step)
+        self.assertIn("failed structural validation", self.validation_step)
+        self.assertNotIn("tail -n 5", self.validation_step)
+        self.assertNotIn("cut -c1-500", self.validation_step)
 
 
 class CommentTargetTest(unittest.TestCase):
