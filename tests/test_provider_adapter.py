@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Tests for the provider adapter and shell-free command runner."""
 
+import contextlib
+import io
 import json
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -98,6 +101,44 @@ class CommandValidationTest(unittest.TestCase):
     def test_script_must_stay_inside_repository(self):
         with self.assertRaises(ValueError):
             run_model_command.parse_command("python3 ../outside.py")
+
+
+class FailureDiagnosticsTest(unittest.TestCase):
+    """Adapter failures forward sanitized diagnostics."""
+
+    def _run_failure(self, stderr):
+        completed = subprocess.CompletedProcess(
+            args=["adapter"], returncode=1, stdout="", stderr=stderr
+        )
+        with patch.dict(
+            "os.environ", {"MODEL_CALL_COMMAND": "python3 ci/call_model.py"}
+        ):
+            with patch.object(
+                run_model_command.subprocess, "run", return_value=completed
+            ):
+                buffer = io.StringIO()
+                with contextlib.redirect_stderr(buffer):
+                    status = run_model_command.main()
+        return status, buffer.getvalue()
+
+    def test_failure_forwards_adapter_reason(self):
+        status, output = self._run_failure(
+            "model call failed: provider request failed with HTTP 401\n"
+        )
+        self.assertEqual(status, 1)
+        self.assertIn("model command failed", output)
+        self.assertIn("HTTP 401", output)
+
+    def test_diagnostics_redact_credential_assignments(self):
+        sanitized = run_model_command.sanitize_diagnostics(
+            "token=abc123\nAuthorization: topsecret\n"
+        )
+        self.assertNotIn("abc123", sanitized)
+        self.assertNotIn("topsecret", sanitized)
+
+    def test_diagnostics_strip_control_characters(self):
+        sanitized = run_model_command.sanitize_diagnostics("ok\x1b[31mred\x1b[0m")
+        self.assertNotIn("\x1b", sanitized)
 
 
 if __name__ == "__main__":

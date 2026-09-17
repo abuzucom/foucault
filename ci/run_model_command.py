@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -11,6 +12,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FORBIDDEN_SHELL_TOKENS = (";", "&", "|", ">", "<", "`", "$", "(", ")")
+MAX_DIAGNOSTIC_CHARS = 2_000
+CONTROL_CHARACTERS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+SENSITIVE_ASSIGNMENT = re.compile(
+    r"(?i)(token|password|secret|authorization|api[_-]?key)(\s*[:=]\s*)\S+"
+)
 FORWARDED_ENVIRONMENT = {
     "AUDIT_PROMPT_FILE",
     "CASE_TEXT_FILE",
@@ -45,8 +51,16 @@ def parse_command(command: str) -> list[str]:
     return [sys.executable, str(script)]
 
 
+def sanitize_diagnostics(text: str) -> str:
+    """Return bounded adapter diagnostics without credentials or control characters."""
+    sanitized = CONTROL_CHARACTERS.sub("?", text)
+    sanitized = SENSITIVE_ASSIGNMENT.sub(r"\1\2<redacted>", sanitized)
+    return sanitized[:MAX_DIAGNOSTIC_CHARS]
+
+
 def main() -> int:
-    """Run the validated adapter and forward only its standard output."""
+    """Run the validated adapter. Forward its standard output on success and
+    sanitized diagnostics on failure."""
     try:
         arguments = parse_command(os.environ.get("MODEL_CALL_COMMAND", ""))
         adapter_environment = {
@@ -67,6 +81,9 @@ def main() -> int:
         return 2
     if result.returncode:
         print("model command failed", file=sys.stderr)
+        diagnostics = sanitize_diagnostics(result.stderr or "").strip()
+        if diagnostics:
+            print(diagnostics, file=sys.stderr)
         return result.returncode
     print(result.stdout, end="")
     return 0
