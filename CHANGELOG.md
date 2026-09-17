@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.2.4] (2026-09-17)
+
+### Fixed
+
+- Switched the active review model to `kimi-k2.7-code` and raised the output
+  budget to 16384 tokens. `gpt-oss:20b` returned empty or malformed responses
+  on two of three review runs.
+
 ## [3.2.3] (2026-09-17)
 
 ### Fixed
