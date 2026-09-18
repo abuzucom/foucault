@@ -10,8 +10,10 @@ loading `AUDIT.md` into a deployment.
 
 ### Fixed
 
-- Logged the model response guarded in a code fence when final structure
-  validation fails.
+- Uploaded the model response as the `invalid-review-response` workflow
+  artifact when final structure validation fails. The response never reaches
+  the log stream. An untrusted response cannot emit a GitHub Actions workflow
+  command.
 - Distinguished empty model responses in PR review response validation.
 
 ## [3.3.8] (2026-09-17)

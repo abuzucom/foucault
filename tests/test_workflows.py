@@ -201,9 +201,26 @@ class ResponseRetryTest(unittest.TestCase):
         self.assertNotIn("tail -n 5", self.validation_step)
         self.assertNotIn("cut -c1-500", self.validation_step)
 
-    def test_validation_failure_logs_guarded_response(self):
-        self.assertIn("response.txt", self.validation_step)
-        self.assertIn("fence", self.validation_step)
+    def test_validation_failure_keeps_the_response_out_of_the_log(self):
+        self.assertNotIn("sys.stderr.write", self.validation_step)
+        self.assertNotIn("fence", self.validation_step)
+        self.assertNotIn("read_text", self.validation_step)
+
+    def test_invalid_response_uploads_as_an_artifact(self):
+        upload_pattern = (
+            r"uses: actions/upload-artifact@[0-9a-f]{40} # v\d+\.\d+\.\d+\s+"
+            r"with:\s+"
+            r"name: invalid-review-response\s+"
+            r"path: response\.txt"
+        )
+        self.assertRegex(self.validation_step, upload_pattern)
+
+    def test_upload_runs_only_after_validation_fails(self):
+        self.assertIn("id: validate", self.validation_step)
+        self.assertIn(
+            "if: ${{ failure() && steps.validate.conclusion == 'failure' }}",
+            self.validation_step,
+        )
 
 
 class CommentTargetTest(unittest.TestCase):
