@@ -23,6 +23,8 @@ class ResponseError(ValueError):
 
 
 def _last_verdict(lines: list[str]) -> tuple[str, str]:
+    if not any(line.strip() for line in lines):
+        raise ResponseError("response is empty")
     for line in reversed(lines):
         match = VERDICT_PATTERN.fullmatch(line.strip())
         if match:

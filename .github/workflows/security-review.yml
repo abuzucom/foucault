@@ -265,6 +265,7 @@ jobs:
           fi
 
       - name: Validate report structure
+        id: validate
         run: |
           set -euo pipefail
           if ! validation_error="$(
@@ -272,8 +273,23 @@ jobs:
           )"; then
             echo "final response failed structural validation:" >&2
             printf '%s\n' "$validation_error" >&2
+            echo "the model response is attached as the invalid-review-response artifact" >&2
             exit 1
           fi
+
+      # The model response is untrusted text. A log line starting with :: is a
+      # GitHub Actions workflow command, so echoing the response to stderr lets
+      # a prompt-injected response set outputs, mask values, or stop command
+      # processing. An artifact keeps the response out of the log stream while
+      # leaving it available for diagnosis.
+      - name: Upload the invalid model response
+        if: ${{ failure() && steps.validate.conclusion == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: invalid-review-response
+          path: response.txt
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Parse verdict
         id: verdict

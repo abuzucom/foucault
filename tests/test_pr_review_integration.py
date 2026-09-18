@@ -46,6 +46,11 @@ class ResponseValidationTest(unittest.TestCase):
         with self.assertRaises(ResponseError):
             validate_response(response)
 
+    def test_empty_response_fails(self):
+        with self.assertRaises(ResponseError) as context:
+            validate_response("")
+        self.assertIn("response is empty", str(context.exception))
+
 
 class WorkflowWiringTest(unittest.TestCase):
     """The trusted caller and reusable workflow retain the security boundary."""
