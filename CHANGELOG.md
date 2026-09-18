@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.3.10] (2026-09-18)
+
+### Fixed
+
+- Refreshed the recorded `CHANGELOG.md` hash in `upstream-files.json`. The
+  3.3.9 entry left the manifest stale, and `check_upstream_drift.py
+  --check-local` reported drift on the default branch.
+- Added `tests/test_upstream_manifest.py`. The test suite now reports a stale
+  manifest hash on every covered platform, ahead of the single CI job that
+  runs the drift checker.
+
 ## [3.3.9] (2026-09-18)
 
 ### Fixed
