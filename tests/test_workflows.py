@@ -201,6 +201,10 @@ class ResponseRetryTest(unittest.TestCase):
         self.assertNotIn("tail -n 5", self.validation_step)
         self.assertNotIn("cut -c1-500", self.validation_step)
 
+    def test_validation_failure_logs_guarded_response(self):
+        self.assertIn("response.txt", self.validation_step)
+        self.assertIn("fence", self.validation_step)
+
 
 class CommentTargetTest(unittest.TestCase):
     """The review comment targets the resolved pull request number.

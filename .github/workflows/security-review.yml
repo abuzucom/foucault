@@ -272,6 +272,19 @@ jobs:
           )"; then
             echo "final response failed structural validation:" >&2
             printf '%s\n' "$validation_error" >&2
+            python3 - <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          path = Path("response.txt")
+          raw = path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
+          runs = re.findall(r"`+", raw)
+          longest = max((len(run) for run in runs), default=0)
+          fence = "`" * max(3, longest + 1)
+          body = f"{raw}\n" if raw and not raw.endswith("\n") else raw
+          sys.stderr.write(f"{fence}\n{body}{fence}\n")
+          PY
             exit 1
           fi
 
