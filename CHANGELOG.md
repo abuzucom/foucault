@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.3.11] (2026-09-20)
+
+### Added
+
+- Recorded `abuzucom/agents` as an adopter in `adopters/agents.md`, pinned
+  at commit `62851df1ef177593adbb9e06b223f5a6dce66fc0` (release 3.3.10).
+
 ## [3.3.10] (2026-09-18)
 
 ### Fixed
