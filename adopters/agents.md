@@ -7,7 +7,7 @@ record assumes.
 
 `abuzucom/agents` pins `AUDIT.md` and the reusable
 `.github/workflows/security-review.yml` to the same commit,
-`551a8000a33ba1955d5e9ed79c9f08daacc4ae99` (release 3.3.8).
+`62851df1ef177593adbb9e06b223f5a6dce66fc0` (release 3.3.10).
 
 ## Wiring
 
