@@ -17,6 +17,12 @@ record assumes.
   workflow run head, and calls `security-review.yml` at the pinned commit.
 - `ci/build_pr_case.py`, `ci/run_model_command.py`, `ci/call_model.py`, and
   `ci/model_providers.json` are copied verbatim from the pinned commit.
+- `scripts/check_pr_review_response.py` is also copied verbatim. The reusable
+  workflow's "Validate report structure" step runs it from the caller's own
+  checkout, not from the `.foucault` checkout that holds `AUDIT.md`, so it
+  belongs in the adopter's `scripts/` directory. This repository's own
+  `docs/pr-security-review.md` omits it from the adopter checklist; noted
+  here so the next adopter does not miss it too.
 - The active provider profile is Ollama with `kimi-k2.7-code`, mapped from
   the `OLLAMA_API_KEY` repository secret.
 - `fail_on_block: true`. Fork pull requests receive an explicit skip result
