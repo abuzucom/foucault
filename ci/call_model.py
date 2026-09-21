@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import sys
 import time
 from pathlib import Path
@@ -19,6 +20,8 @@ MAX_INPUT_CHARS = 4_000_000
 MAX_RESPONSE_BYTES = 1_000_000
 REQUEST_TIMEOUT_SECONDS = 180
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+BASE_RETRY_DELAY_SECONDS = 1
+MAX_RETRY_DELAY_SECONDS = 30
 ALLOWED_PROTOCOLS = {"ollama", "openai-compatible", "anthropic", "google"}
 ALLOWED_ENDPOINTS = {
     "https://ollama.com/api",
@@ -213,13 +216,31 @@ def _extract_text(protocol: str, result: dict[str, Any]) -> str:
     return text
 
 
-def _request_once(request: Request) -> tuple[dict[str, Any], int | None]:
+def _retry_delay_seconds(attempt: int, retry_after: str | None) -> float:
+    """Return a bounded backoff delay, honoring a provider Retry-After header.
+
+    Retry-After can also carry an HTTP date; float() rejects that form and
+    falls back to exponential backoff rather than parsing a date string.
+    """
+    if retry_after is not None:
+        try:
+            parsed = float(retry_after)
+        except ValueError:
+            parsed = None
+        if parsed is not None and parsed >= 0:
+            return min(parsed, MAX_RETRY_DELAY_SECONDS)
+    base = BASE_RETRY_DELAY_SECONDS * (2 ** attempt)
+    return min(base + random.uniform(0, base), MAX_RETRY_DELAY_SECONDS)
+
+
+def _request_once(request: Request) -> tuple[dict[str, Any], int | None, str | None]:
     try:
         with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-            return _read_response(response), None
+            return _read_response(response), None, None
     except HTTPError as error:
         if error.code in RETRYABLE_STATUS_CODES:
-            return {}, error.code
+            retry_after = error.headers.get("Retry-After") if error.headers else None
+            return {}, error.code, retry_after
         raise ProviderError(f"provider request failed with HTTP {error.code}") from error
     except URLError as error:
         raise ProviderError("provider network request failed") from error
@@ -238,11 +259,11 @@ def call_model(system_prompt: str, mode: str, case_text: str) -> str:
     profile = _load_profile()
     request = _build_request(profile, system_prompt, case_text, api_key)
     for attempt in range(2):
-        result, retry_status = _request_once(request)
+        result, retry_status, retry_after = _request_once(request)
         if retry_status is None:
             return _extract_text(profile["protocol"], result)
         if attempt == 0:
-            time.sleep(1)
+            time.sleep(_retry_delay_seconds(attempt, retry_after))
     raise ProviderError("provider request failed after one retry")
 
 
