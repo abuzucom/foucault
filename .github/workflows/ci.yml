@@ -82,6 +82,9 @@ jobs:
       - name: Policy size
         run: python3 scripts/check_policy_size.py
 
+      - name: AUDIT policy
+        run: python3 scripts/check_audit_policy.py
+
       - name: Workflow action pins
         run: python3 scripts/check_action_pins.py
 
@@ -117,6 +120,12 @@ jobs:
         # --model-call resolves to an importable module and executes its code,
         # so it must never be fed from pull request content.
         run: python3 eval/run_eval.py
+
+      - name: AUDIT policy diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/audit_diff_report.py
 
       - name: Hook tests
         run: python3 scripts/run_tests.py

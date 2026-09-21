@@ -48,6 +48,11 @@ exits 0. This is what runs in this repository's own CI, since foucault
 ships no model credential. Any consumer with a model credential can run the
 live check the same way.
 
+The repository also runs `scripts/check_audit_policy.py`. The checker validates
+required sections and controls, duplicate headings, ASCII text, LF endings,
+prose width, and the 32 KiB policy limit. Run `make audit-check` to run the
+checker, policy-size check, and structure-only corpus together.
+
 The repository's CI adapter lives at `ci.call_model:call_model`. It reads the
 active provider profile from `ci/model_providers.json`. Set `MODEL_API_KEY`
 outside the repository before running a live check. The adapter supports the

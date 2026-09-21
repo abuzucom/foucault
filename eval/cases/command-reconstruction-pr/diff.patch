@@ -1,0 +1,6 @@
+--- a/diagnostics.py
++++ b/diagnostics.py
+@@
++def inspect(path):
++    command = "cat " + path
++    return eval("run(" + repr(command) + ")")

@@ -1,0 +1,6 @@
+{
+  "mode": "File",
+  "expected_verdict": "HIGH",
+  "expected_classes": ["2.8"],
+  "notes": "The fallback disables isolation and omits authorization and resource limits when the sandbox fails."
+}

@@ -1,0 +1,6 @@
+{
+  "mode": "File",
+  "expected_verdict": "HIGH",
+  "expected_classes": ["2.15"],
+  "notes": "The agent can rewrite its policy and tool definitions at runtime, enabling instruction and authorization evasion."
+}
