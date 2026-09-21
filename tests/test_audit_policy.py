@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -85,6 +88,28 @@ class AuditPolicyTest(unittest.TestCase):
         ):
             result = audit_diff_report.git_show("b" * 40)
         self.assertIsNone(result)
+
+    def test_audit_diff_report_runs_as_script(self):
+        revision = audit_diff_report.trusted_git.run_git(
+            Path.cwd(), ["rev-parse", "HEAD"], check=True
+        ).stdout.strip()
+        with tempfile.TemporaryDirectory() as directory:
+            summary = Path(directory) / "summary.md"
+            environment = dict(os.environ)
+            environment.update(
+                BASE_SHA=revision,
+                HEAD_SHA=revision,
+                GITHUB_STEP_SUMMARY=str(summary),
+            )
+            result = subprocess.run(
+                [sys.executable, "scripts/audit_diff_report.py"],
+                cwd=Path.cwd(),
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":

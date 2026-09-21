@@ -19,6 +19,8 @@ loading `AUDIT.md` into a deployment.
 - Hardened the policy-diff report against unvalidated revisions and missing
   historical policy files. Added negative coverage for policy and report
   validation paths.
+- Fixed direct CI execution of the policy-diff report by supporting its
+  standalone script import path.
 
 ### Added
 

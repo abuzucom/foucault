@@ -9,7 +9,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-from scripts import trusted_git
+try:
+    from scripts import trusted_git
+except ImportError:
+    import trusted_git
 
 
 REVISION_PATTERN = re.compile(r"^[0-9a-fA-F]{40,64}$")
