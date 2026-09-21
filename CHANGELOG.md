@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.3.12] (2026-09-21)
+
+### Fixed
+
+- Replaced the fixed 1-second retry delay in `ci/call_model.py` with a
+  single bounded jittered delay before the one retry the caller performs.
+  The delay still honors a provider's Retry-After header when present.
+  The retry loop only ever performs one retry. The earlier framing as
+  exponential backoff described dead code. Dropped the unused `attempt`
+  parameter and renamed the constants to match the actual single-delay
+  behavior.
+
 ## [3.3.11] (2026-09-20)
 
 ### Added

@@ -79,6 +79,43 @@ class ProviderRequestTest(unittest.TestCase):
                 call_model.call_model("x", "PR", "x" * call_model.MAX_INPUT_CHARS)
 
 
+class RetryDelayTest(unittest.TestCase):
+    """The single retry waits a bounded, jittered delay honoring Retry-After."""
+
+    def test_retry_after_header_is_honored(self):
+        self.assertEqual(call_model._retry_delay_seconds("5"), 5.0)
+
+    def test_retry_after_header_is_bounded(self):
+        self.assertEqual(
+            call_model._retry_delay_seconds("999"),
+            call_model.MAX_RETRY_DELAY_SECONDS,
+        )
+
+    def test_negative_retry_after_falls_back_to_the_jittered_default(self):
+        delay = call_model._retry_delay_seconds("-1")
+        self.assertGreaterEqual(delay, call_model.RETRY_DELAY_SECONDS)
+        self.assertLessEqual(
+            delay,
+            call_model.RETRY_DELAY_SECONDS + call_model.RETRY_DELAY_JITTER_SECONDS,
+        )
+
+    def test_invalid_retry_after_falls_back_to_the_jittered_default(self):
+        delay = call_model._retry_delay_seconds("not-a-number")
+        self.assertGreaterEqual(delay, call_model.RETRY_DELAY_SECONDS)
+        self.assertLessEqual(
+            delay,
+            call_model.RETRY_DELAY_SECONDS + call_model.RETRY_DELAY_JITTER_SECONDS,
+        )
+
+    def test_missing_retry_after_uses_the_jittered_default(self):
+        delay = call_model._retry_delay_seconds(None)
+        self.assertGreaterEqual(delay, call_model.RETRY_DELAY_SECONDS)
+        self.assertLessEqual(
+            delay,
+            call_model.RETRY_DELAY_SECONDS + call_model.RETRY_DELAY_JITTER_SECONDS,
+        )
+
+
 class CommandValidationTest(unittest.TestCase):
     """Adapter commands cannot introduce shell interpretation."""
 
