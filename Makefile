@@ -1,4 +1,4 @@
-.PHONY: sync check lint test identity changelog
+.PHONY: sync check lint test identity changelog audit-check
 
 # Overridable so a platform without this name can supply its own:
 #   make test PYTHON=py
@@ -18,6 +18,11 @@ check:
 
 changelog:
 	$(PYTHON) scripts/check_changelog.py
+
+audit-check:
+	$(PYTHON) scripts/check_audit_policy.py
+	$(PYTHON) scripts/check_policy_size.py
+	$(PYTHON) eval/run_eval.py
 
 lint:
 	$(PYTHON) scripts/lint_style.py

@@ -1,0 +1,6 @@
+{
+  "mode": "File",
+  "expected_verdict": "HIGH",
+  "expected_classes": ["2.5"],
+  "notes": "The server validates one DNS result but connects after a second lookup, allowing DNS rebinding to an internal destination."
+}

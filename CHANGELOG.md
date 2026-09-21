@@ -6,6 +6,40 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.3.14] (2026-09-21)
+
+### Changed
+
+- Reframed `README.md` around actionable LLM security controls, evidence, and
+  CI verdicts. Clarified its distinction from implementation-time agent
+  governance.
+- Reframed the README around explicit operational rules and real enforcement.
+  Documented the rejection of authority theater and contradictory escape
+  valves.
+- Hardened the policy-diff report against unvalidated revisions and missing
+  historical policy files. Added negative coverage for policy and report
+  validation paths.
+- Fixed direct CI execution of the policy-diff report by supporting its
+  standalone script import path.
+
+### Added
+
+- Added `scripts/check_audit_policy.py` and `tests/test_audit_policy.py` for
+  required AUDIT.md sections, controls, headings, encoding, line width, and
+  size enforcement.
+- Added four evaluator cases for DNS-rebinding SSRF, command reconstruction,
+  policy self-modification, and unsafe sandbox fallback.
+- Added `make audit-check`, pull request policy-diff summaries, and weekly
+  scheduled validation for policy, evaluator, and repository tests.
+
+## [3.3.13] (2026-09-21)
+
+### Changed
+
+- Reworded `AUDIT.md` with a more impersonal, professional style. Removed
+  redundant wording while preserving review controls, verdicts, blockers, and
+  evaluator contracts.
+
 ## [3.3.12] (2026-09-21)
 
 ### Fixed

@@ -108,14 +108,14 @@
     "tools/hook-trace/sitecustomize.py": "9dde32d98e1bdf58d0edadf2afc03b7215239f00669021934906574f6e146b1f"
   },
   "local_adapted_files": {
-    ".github/workflows/ci.yml": "2ace0a76fb65cdea7b961635dcd7524a693d6cd449b5364409aedfbb0509df70",
+    ".github/workflows/ci.yml": "492faa8a79a524684e9c55180320ebb6b25d3e140cca0353f42f3e09c249c5ee",
     ".github/workflows/immutable-conflict-check.yml": "4498a0d7377c5ce7bca2220cdf7c076c8bb7d27e9db2d7a9d4083cd5fca701c6",
     ".pre-commit-config.yaml": "9047cc425dfcf0642ae5f2834b5f39a5cdb6f4b1f5febc721c48fb384b1c7d8d",
     "AGENTS.md": "b4e1a017147c3cf8fd69d6a607249731e3fb4731380dc7372422ce5139ad717b",
-    "CHANGELOG.md": "4cc0b33b9711684be7c8fad3720e11b8a140c9fe8f82dee310445535d155aff4",
+    "CHANGELOG.md": "8679a4ced6848230eb429ed2047000edd0048dec11b6c5d1b00aeae37521e37f",
     "CONTRIBUTING.md": "0ca0b20dc825eef3d1b3cc01f1663efb76a3884569485d323ca510eb9336c618",
-    "Makefile": "376913b2d35ae05edf5446e9859f944ab4c3dc80d1744834178c676c25ff5bac",
-    "README.md": "86b2d07721572beabf4b83a891c4b342a8486d90d7876971dfa2e5b7ee8138a8",
+    "Makefile": "73693be03526f9ab3dfe99555181cf7d4f9e638295c2d92a1e3bed64fbee34a9",
+    "README.md": "e5289f12d4743fc07fe40523f29575ffb0cb0b0d74d3dcd5bdb5f6d3f659f765",
     "SECURITY.md": "135860ea6deee1c8231d3bf1a43e57f4e55446d63a8362bd75b21c17f70e1cb5",
     "docs/agent-policy/enforcement.md": "4939ec2eaa4e1c6a9e6abef4af471fe242a3618304b20d87b3f403d3815a9b4a",
     "docs/agent-policy/github.md": "16b27ee756f23bb8365e62c13794bd54b47e57abe231439acfce4ed28d3a7872",

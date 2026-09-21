@@ -1,0 +1,7 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": ["2.5"],
+  "expect_json": true,
+  "notes": "The change reconstructs shell command text from an untrusted value and uses dynamic evaluation."
+}

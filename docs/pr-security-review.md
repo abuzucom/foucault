@@ -221,3 +221,14 @@ Run the structure-only corpus when no key is available:
 ```console
 python3 eval/run_eval.py
 ```
+
+Run the local policy and evaluator checks together:
+
+```console
+make audit-check PYTHON=python3
+```
+
+Pull request CI adds an AUDIT.md policy-diff summary with base size, head size,
+and approximate changed-line positions. The metric compares aligned line
+positions and length delta. It is not a unified diff line count. Weekly
+scheduled validation repeats policy, evaluator, and repository test checks.
