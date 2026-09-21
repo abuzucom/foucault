@@ -20,7 +20,8 @@ MAX_INPUT_CHARS = 4_000_000
 MAX_RESPONSE_BYTES = 1_000_000
 REQUEST_TIMEOUT_SECONDS = 180
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
-BASE_RETRY_DELAY_SECONDS = 1
+RETRY_DELAY_SECONDS = 2
+RETRY_DELAY_JITTER_SECONDS = 2
 MAX_RETRY_DELAY_SECONDS = 30
 ALLOWED_PROTOCOLS = {"ollama", "openai-compatible", "anthropic", "google"}
 ALLOWED_ENDPOINTS = {
@@ -216,11 +217,12 @@ def _extract_text(protocol: str, result: dict[str, Any]) -> str:
     return text
 
 
-def _retry_delay_seconds(attempt: int, retry_after: str | None) -> float:
-    """Return a bounded backoff delay, honoring a provider Retry-After header.
+def _retry_delay_seconds(retry_after: str | None) -> float:
+    """Return a bounded delay before the single retry.
 
-    Retry-After can also carry an HTTP date; float() rejects that form and
-    falls back to exponential backoff rather than parsing a date string.
+    Honors a provider Retry-After header when present. Retry-After can also
+    carry an HTTP date; float() rejects that form and falls back to the
+    jittered default rather than parsing a date string.
     """
     if retry_after is not None:
         try:
@@ -229,8 +231,10 @@ def _retry_delay_seconds(attempt: int, retry_after: str | None) -> float:
             parsed = None
         if parsed is not None and parsed >= 0:
             return min(parsed, MAX_RETRY_DELAY_SECONDS)
-    base = BASE_RETRY_DELAY_SECONDS * (2 ** attempt)
-    return min(base + random.uniform(0, base), MAX_RETRY_DELAY_SECONDS)
+    return min(
+        RETRY_DELAY_SECONDS + random.uniform(0, RETRY_DELAY_JITTER_SECONDS),
+        MAX_RETRY_DELAY_SECONDS,
+    )
 
 
 def _request_once(request: Request) -> tuple[dict[str, Any], int | None, str | None]:
@@ -263,7 +267,7 @@ def call_model(system_prompt: str, mode: str, case_text: str) -> str:
         if retry_status is None:
             return _extract_text(profile["protocol"], result)
         if attempt == 0:
-            time.sleep(_retry_delay_seconds(attempt, retry_after))
+            time.sleep(_retry_delay_seconds(retry_after))
     raise ProviderError("provider request failed after one retry")
 
 
