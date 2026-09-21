@@ -80,38 +80,40 @@ class ProviderRequestTest(unittest.TestCase):
 
 
 class RetryDelayTest(unittest.TestCase):
-    """Backoff honors a Retry-After header and bounds exponential growth."""
+    """The single retry waits a bounded, jittered delay honoring Retry-After."""
 
     def test_retry_after_header_is_honored(self):
-        self.assertEqual(call_model._retry_delay_seconds(0, "5"), 5.0)
+        self.assertEqual(call_model._retry_delay_seconds("5"), 5.0)
 
     def test_retry_after_header_is_bounded(self):
         self.assertEqual(
-            call_model._retry_delay_seconds(0, "999"),
+            call_model._retry_delay_seconds("999"),
             call_model.MAX_RETRY_DELAY_SECONDS,
         )
 
-    def test_negative_retry_after_falls_back_to_exponential_backoff(self):
-        delay = call_model._retry_delay_seconds(0, "-1")
-        self.assertGreaterEqual(delay, call_model.BASE_RETRY_DELAY_SECONDS)
-        self.assertLessEqual(delay, call_model.MAX_RETRY_DELAY_SECONDS)
+    def test_negative_retry_after_falls_back_to_the_jittered_default(self):
+        delay = call_model._retry_delay_seconds("-1")
+        self.assertGreaterEqual(delay, call_model.RETRY_DELAY_SECONDS)
+        self.assertLessEqual(
+            delay,
+            call_model.RETRY_DELAY_SECONDS + call_model.RETRY_DELAY_JITTER_SECONDS,
+        )
 
-    def test_invalid_retry_after_falls_back_to_exponential_backoff(self):
-        delay = call_model._retry_delay_seconds(1, "not-a-number")
-        self.assertGreaterEqual(delay, call_model.BASE_RETRY_DELAY_SECONDS * 2)
-        self.assertLessEqual(delay, call_model.MAX_RETRY_DELAY_SECONDS)
+    def test_invalid_retry_after_falls_back_to_the_jittered_default(self):
+        delay = call_model._retry_delay_seconds("not-a-number")
+        self.assertGreaterEqual(delay, call_model.RETRY_DELAY_SECONDS)
+        self.assertLessEqual(
+            delay,
+            call_model.RETRY_DELAY_SECONDS + call_model.RETRY_DELAY_JITTER_SECONDS,
+        )
 
-    def test_missing_retry_after_uses_bounded_exponential_backoff(self):
-        delay = call_model._retry_delay_seconds(0, None)
-        self.assertGreaterEqual(delay, call_model.BASE_RETRY_DELAY_SECONDS)
-        self.assertLessEqual(delay, call_model.MAX_RETRY_DELAY_SECONDS)
-
-    def test_later_attempts_grow_the_backoff_ceiling(self):
-        # Fix jitter at its minimum (0) to compare the deterministic floors.
-        with patch.object(call_model.random, "uniform", return_value=0.0):
-            first = call_model._retry_delay_seconds(0, None)
-            second = call_model._retry_delay_seconds(1, None)
-        self.assertLess(first, second)
+    def test_missing_retry_after_uses_the_jittered_default(self):
+        delay = call_model._retry_delay_seconds(None)
+        self.assertGreaterEqual(delay, call_model.RETRY_DELAY_SECONDS)
+        self.assertLessEqual(
+            delay,
+            call_model.RETRY_DELAY_SECONDS + call_model.RETRY_DELAY_JITTER_SECONDS,
+        )
 
 
 class CommandValidationTest(unittest.TestCase):
