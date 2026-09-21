@@ -6,12 +6,44 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.3.12] (2026-09-21)
+
+### Fixed
+
+- Replaced the fixed 1-second retry delay in `ci/call_model.py` with a
+  single bounded jittered delay before the one retry the caller performs.
+  The delay still honors a provider's Retry-After header when present.
+  The retry loop only ever performs one retry. The earlier framing as
+  exponential backoff described dead code. Dropped the unused `attempt`
+  parameter and renamed the constants to match the actual single-delay
+  behavior.
+
+## [3.3.11] (2026-09-20)
+
+### Added
+
+- Recorded `abuzucom/agents` as an adopter in `adopters/agents.md`, pinned
+  at commit `62851df1ef177593adbb9e06b223f5a6dce66fc0` (release 3.3.10).
+
+## [3.3.10] (2026-09-18)
+
+### Fixed
+
+- Refreshed the recorded `CHANGELOG.md` hash in `upstream-files.json`. The
+  3.3.9 entry left the manifest stale, and `check_upstream_drift.py
+  --check-local` reported drift on the default branch.
+- Added `tests/test_upstream_manifest.py`. The test suite now reports a stale
+  manifest hash on every covered platform, ahead of the single CI job that
+  runs the drift checker.
+
 ## [3.3.9] (2026-09-18)
 
 ### Fixed
 
-- Logged the model response guarded in a code fence when final structure
-  validation fails.
+- Uploaded the model response as the `invalid-review-response` workflow
+  artifact when final structure validation fails. The response never reaches
+  the log stream. An untrusted response cannot emit a GitHub Actions workflow
+  command.
 - Distinguished empty model responses in PR review response validation.
 
 ## [3.3.8] (2026-09-17)

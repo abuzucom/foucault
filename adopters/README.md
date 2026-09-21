@@ -17,4 +17,4 @@ Add `adopters/<repo>.md` with:
 
 ## Current adopters
 
-None recorded yet.
+- [`agents`](agents.md)
