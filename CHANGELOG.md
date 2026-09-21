@@ -10,9 +10,13 @@ loading `AUDIT.md` into a deployment.
 
 ### Fixed
 
-- Replaced the fixed 1-second retry delay in `ci/call_model.py` with bounded
-  exponential backoff plus jitter, honoring a provider's Retry-After header
-  when present.
+- Replaced the fixed 1-second retry delay in `ci/call_model.py` with a
+  single bounded jittered delay before the one retry the caller performs.
+  The delay still honors a provider's Retry-After header when present.
+  The retry loop only ever performs one retry. The earlier framing as
+  exponential backoff described dead code. Dropped the unused `attempt`
+  parameter and renamed the constants to match the actual single-delay
+  behavior.
 
 ## [3.3.11] (2026-09-20)
 
