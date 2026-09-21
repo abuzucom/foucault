@@ -229,5 +229,6 @@ make audit-check PYTHON=python3
 ```
 
 Pull request CI adds an AUDIT.md policy-diff summary with base size, head size,
-and changed-line count. Weekly scheduled validation repeats policy, evaluator,
-and repository test checks.
+and approximate changed-line positions. The metric compares aligned line
+positions and length delta. It is not a unified diff line count. Weekly
+scheduled validation repeats policy, evaluator, and repository test checks.

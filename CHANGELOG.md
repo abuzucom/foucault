@@ -16,6 +16,9 @@ loading `AUDIT.md` into a deployment.
 - Reframed the README around explicit operational rules and real enforcement.
   Documented the rejection of authority theater and contradictory escape
   valves.
+- Hardened the policy-diff report against unvalidated revisions and missing
+  historical policy files. Added negative coverage for policy and report
+  validation paths.
 
 ### Added
 
