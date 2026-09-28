@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.3.15] (2026-09-28)
+
+### Added
+
+- Recorded `abuzucom/1a2n-web-visualizer` as an adopter in
+  `adopters/1a2n-web-visualizer.md`, pinned at commit
+  `06d74fba4d9013654cdaf9896bb7535724385186` (release 3.3.14).
+
 ## [3.3.14] (2026-09-21)
 
 ### Changed
