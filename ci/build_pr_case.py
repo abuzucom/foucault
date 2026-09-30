@@ -108,24 +108,39 @@ def _read_bounded_stdout(
         thread.join(timeout=timeout)
         if thread.is_alive():
             process.kill()
+            if process.stdout is not None:
+                process.stdout.close()
             process.wait()
+            thread.join(timeout=1.0)
             raise RuntimeError(
                 "pull request diff timed out"
             ) from subprocess.TimeoutExpired(command, timeout)
         if read_error:
             process.kill()
+            if process.stdout is not None:
+                process.stdout.close()
             process.wait()
+            if thread.is_alive():
+                thread.join(timeout=1.0)
             raise RuntimeError("diff output could not be captured") from read_error[0]
         raw_output = output[0] if output else b""
         if len(raw_output) > maximum_bytes:
             process.kill()
+            if process.stdout is not None:
+                process.stdout.close()
             process.wait()
+            if thread.is_alive():
+                thread.join(timeout=1.0)
             raise RuntimeError("pull request diff exceeds the configured limit")
         try:
             return_code = process.wait(timeout=timeout)
         except subprocess.TimeoutExpired as error:
             process.kill()
+            if process.stdout is not None:
+                process.stdout.close()
             process.wait()
+            if thread.is_alive():
+                thread.join(timeout=1.0)
             raise RuntimeError("pull request diff timed out") from error
     if return_code:
         raise RuntimeError("pull request diff could not be generated")

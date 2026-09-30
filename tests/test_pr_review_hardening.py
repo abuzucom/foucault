@@ -138,6 +138,31 @@ class ReviewHardeningTest(unittest.TestCase):
                 os.environ.clear()
                 os.environ.update(saved_env)
 
+    def test_workflow_binds_audit_ref_output_and_verifies_revision(self):
+        """Verify workflow emits audit_ref and verifies the checked-out policy SHA."""
+        workflow = REVIEW_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn('core.setOutput("audit_ref", process.env.INPUT_AUDIT_REF);', workflow)
+        self.assertIn("ref: ${{ steps.resolve.outputs.audit_ref }}", workflow)
+        self.assertIn("name: Verify AUDIT.md revision", workflow)
+        self.assertIn("git -C .foucault rev-parse HEAD", workflow)
+
+    def test_bounded_diff_reader_terminates_reader_thread_on_timeout(self):
+        """Verify reader thread is terminated cleanly when diff times out."""
+        import threading
+        threads_before = set(threading.enumerate())
+        command = [
+            sys.executable,
+            "-c",
+            "import time; time.sleep(2)",
+        ]
+        with self.assertRaises(RuntimeError) as context:
+            build_pr_case._read_bounded_stdout(command, 16, timeout=0.1)
+        self.assertIn("timed out", str(context.exception))
+        threads_after = set(threading.enumerate())
+        new_threads = threads_after - threads_before
+        self.assertEqual(len(new_threads), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
+
