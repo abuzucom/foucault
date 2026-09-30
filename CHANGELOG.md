@@ -41,6 +41,12 @@ loading `AUDIT.md` into a deployment.
 
 ## [3.3.15] (2026-09-29)
 
+### Added
+
+- Recorded `abuzucom/1a2n-web-visualizer` as an adopter in
+  `adopters/1a2n-web-visualizer.md`, pinned at commit
+  `06d74fba4d9013654cdaf9896bb7535724385186` (release 3.3.14).
+
 ### Fixed
 
 - Required a full immutable commit SHA before loading the review policy.
