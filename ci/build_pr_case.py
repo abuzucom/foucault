@@ -14,6 +14,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 MAX_METADATA_BYTES = 1_000_000
+MAX_DIFF_BYTES = 3_000_000
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
 REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 
@@ -78,6 +79,29 @@ def _digest(text: str) -> str:
     return hashlib.sha256(text.replace("\r\n", "\n").encode()).hexdigest()
 
 
+def _read_bounded_stdout(command: list[str], maximum_bytes: int) -> str:
+    """Run one fixed command and reject output above the configured bound."""
+    with subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    ) as process:
+        if process.stdout is None:
+            raise RuntimeError("diff output could not be captured")
+        output = process.stdout.read(maximum_bytes + 1)
+        if len(output) > maximum_bytes:
+            process.kill()
+            process.wait()
+            raise RuntimeError("pull request diff exceeds the configured limit")
+        return_code = process.wait()
+    if return_code:
+        raise RuntimeError("pull request diff could not be generated")
+    try:
+        return output.decode("utf-8")
+    except UnicodeError as error:
+        raise RuntimeError("pull request diff is not valid UTF-8") from error
+
+
 def build_case() -> dict[str, object]:
     """Build one PR envelope from trusted lifecycle data and target evidence."""
     with open(os.environ["EVENT_PATH"], encoding="utf-8") as event_file:
@@ -93,12 +117,10 @@ def build_case() -> dict[str, object]:
     body = pull_request.get("body")
     if not isinstance(title, str) or not isinstance(body, (str, type(None))):
         raise RuntimeError("pull request title or body is invalid")
-    diff = subprocess.run(
-        ["git", "diff", base_sha, head_sha],
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout
+    diff = _read_bounded_stdout(
+        ["git", "diff", "--no-ext-diff", "--no-textconv", base_sha, head_sha],
+        MAX_DIFF_BYTES,
+    )
     target = "Title: " + title + "\n\n" + (body or "")
     target += "\n\n---\n" + diff
     return {

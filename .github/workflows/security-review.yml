@@ -87,6 +87,7 @@ jobs:
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+          INPUT_AUDIT_REF: ${{ inputs.audit_ref }}
           INPUT_BASE_SHA: ${{ inputs.base_sha }}
           INPUT_HEAD_SHA: ${{ inputs.head_sha }}
           INPUT_HEAD_REPO_URL: ${{ inputs.head_repo_url }}
@@ -94,6 +95,7 @@ jobs:
         with:
           script: |
             const shaPattern = /^[0-9a-f]{40}$/;
+            const auditRefPattern = /^[0-9a-f]{40}$/;
             const repositoryPattern = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
             const inputValues = [
               process.env.INPUT_PR_NUMBER,
@@ -124,6 +126,9 @@ jobs:
             };
 
             try {
+              if (!auditRefPattern.test(process.env.INPUT_AUDIT_REF || "")) {
+                throw new Error("audit policy revision is invalid");
+              }
               if (inputValues.some((value) => value)) {
                 if (inputValues.some((value) => !value)) {
                   throw new Error("resolved pull request metadata is incomplete");

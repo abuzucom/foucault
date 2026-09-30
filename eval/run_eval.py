@@ -174,20 +174,24 @@ def verdict_matches(expected_verdict: str, response_text: str, *,
 
 
 def json_companion_ok(response_text: str) -> tuple[bool, str]:
-    prefix_at = response_text.rfind(VERDICT_JSON_PREFIX)
-    if prefix_at < 0:
-        return False, "no VERDICT_JSON: block found"
-    brace_at = response_text.find("{", prefix_at)
-    if brace_at < 0:
-        return False, "VERDICT_JSON block carries no object"
-    # raw_decode reads one value and ignores whatever follows. A greedy regex
-    # instead runs to the last brace in the report, so any later prose
-    # carrying a brace breaks the parse.
-    try:
-        json.JSONDecoder().raw_decode(response_text, brace_at)
-    except json.JSONDecodeError as exc:
-        return False, f"VERDICT_JSON block did not parse: {exc}"
-    return True, "VERDICT_JSON parsed"
+    for line in reversed(response_text.splitlines()):
+        if not line.startswith(VERDICT_JSON_PREFIX):
+            continue
+        payload = line[len(VERDICT_JSON_PREFIX):].lstrip()
+        try:
+            result = json.loads(payload)
+        except json.JSONDecodeError as exc:
+            return False, f"VERDICT_JSON block did not parse: {exc}"
+        if not isinstance(result, dict):
+            return False, "VERDICT_JSON block is not an object"
+        if set(result) != {"mode", "verdict", "findings"}:
+            return False, "VERDICT_JSON block has an invalid shape"
+        if result["mode"] not in VALID_MODES or not isinstance(result["verdict"], str):
+            return False, "VERDICT_JSON block has invalid values"
+        if not isinstance(result["findings"], list):
+            return False, "VERDICT_JSON findings are not a list"
+        return True, "VERDICT_JSON parsed"
+    return False, "no VERDICT_JSON: line found"
 
 
 def resolve_model_call(spec: str):
