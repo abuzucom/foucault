@@ -26,8 +26,8 @@ def _validate_audit_ref(audit_ref: str) -> None:
     node_bin = shutil.which("node")
     if node_bin:
         script = (
-            "const pattern = new RegExp(process.argv[1]);\n"
-            "const ref = process.argv[2];\n"
+            "const [patternArg, ref] = process.argv.slice(-2);\n"
+            "const pattern = new RegExp(patternArg);\n"
             "if (!pattern.test(ref || '')) {\n"
             "  console.error('audit policy revision is invalid');\n"
             "  process.exit(1);\n"
