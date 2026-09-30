@@ -18,25 +18,23 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 REVIEW_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "security-review.yml"
 
 
+EXPECTED_AUDIT_REF_PATTERN = r"^[0-9a-f]{40}$"
+
+
 def _validate_audit_ref(audit_ref: str) -> None:
-    """Validate audit policy revision using workflow extraction."""
-    workflow = REVIEW_WORKFLOW.read_text(encoding="utf-8")
-    pattern_match = re.search(r"const auditRefPattern = /([^/]+)/;", workflow)
-    if not pattern_match:
-        raise RuntimeError("auditRefPattern not found in workflow")
-    pattern = pattern_match.group(1)
+    """Validate audit policy revision against the independent specification."""
     node_bin = shutil.which("node")
     if node_bin:
         script = (
-            f"const pattern = /{pattern}/;\n"
-            "const ref = process.argv[1];\n"
+            "const pattern = new RegExp(process.argv[1]);\n"
+            "const ref = process.argv[2];\n"
             "if (!pattern.test(ref || '')) {\n"
             "  console.error('audit policy revision is invalid');\n"
             "  process.exit(1);\n"
             "}\n"
         )
         result = subprocess.run(
-            [node_bin, "-e", script, audit_ref],
+            [node_bin, "-e", script, EXPECTED_AUDIT_REF_PATTERN, audit_ref],
             capture_output=True,
             text=True,
         )
@@ -45,7 +43,7 @@ def _validate_audit_ref(audit_ref: str) -> None:
                 raise ValueError("audit policy revision is invalid")
             raise RuntimeError(f"node error: {result.stderr}")
         return
-    if not re.fullmatch(pattern, audit_ref or ""):
+    if not re.fullmatch(EXPECTED_AUDIT_REF_PATTERN, audit_ref or ""):
         raise ValueError("audit policy revision is invalid")
 
 
@@ -56,6 +54,13 @@ class ReviewHardeningTest(unittest.TestCase):
         workflow = REVIEW_WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("const auditRefPattern = /^[0-9a-f]{40}$/;", workflow)
         self.assertIn("audit policy revision is invalid", workflow)
+
+    def test_workflow_audit_ref_pattern_matches_expected_specification(self):
+        """Verify the workflow regex matches the independent specification."""
+        workflow = REVIEW_WORKFLOW.read_text(encoding="utf-8")
+        pattern_match = re.search(r"const auditRefPattern = /([^/]+)/;", workflow)
+        self.assertIsNotNone(pattern_match)
+        self.assertEqual(pattern_match.group(1), EXPECTED_AUDIT_REF_PATTERN)
 
     def test_audit_ref_validation_behavior(self):
         """Verify audit ref pattern accepts full commit SHA and rejects others."""
