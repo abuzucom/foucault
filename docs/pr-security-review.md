@@ -177,8 +177,9 @@ call a provider once per file or once per finding. The adapter reads each file
 once. It uses dictionary dispatch and set-based endpoint checks.
 
 Response validation compiles patterns once. It scans for the final verdict in
-one pass. It parses the JSON companion once. Input and output limits prevent
-unbounded memory use. The adapter retries a transient request at most once.
+one pass. It parses one complete JSON companion line. Diff capture rejects
+output above 3 MB before envelope construction. The adapter retries a transient
+request at most once.
 
 The workflow does not silently sample an oversized review. It fails closed and
 requires human review when the configured capacity is exceeded.
