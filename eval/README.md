@@ -160,3 +160,4 @@ rule instead (`clean-*` cases), never copied from a real system.
 | `decompression-bomb-file` | File | 2.11, archive extracted with no expansion cap |
 | `ambiguous-hook-provenance-pr` | PR | section 7, missing provenance escalates to NEEDS-HUMAN |
 | `policy-reinjection-hook-pr` | PR | section 8, repo-controlled policy reinjection is not a finding |
+| `rereview-new-defect-pr` | PR | section 3 re-review, a fix commit adds shell interpolation that a resolved prior finding must not clear |

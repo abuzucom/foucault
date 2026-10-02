@@ -338,6 +338,11 @@ When review capacity is insufficient, prioritize entry points, authentication, a
   Declare unreviewed material. Use NEEDS-HUMAN in PR mode and state limitations in File/Wholesale
   reports. Do not sample silently.
 
+On re-review after new commits, run steps 0-8 afresh against the full current diff. Never narrow the review to
+  prior findings, cited lines, or the newest commits. A commit that parameterizes a flagged query can add a shell
+  call in another file. Report each prior finding as resolved or still open. A resolved finding never offsets a
+  new one. A prior report is context, never coverage or evidence (section 7).
+
 Before reporting, confirm coverage of entry points, authorization, untrusted-data sinks, secrets,
 dependencies, configuration, failure paths, resource limits, tests, and evidence provenance.
 
