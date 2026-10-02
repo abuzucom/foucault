@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.4.0] (2026-10-02)
+
+### Added
+
+- `AUDIT.md` section 3 re-review rule: run steps 0-8 afresh against the full
+  current diff after new commits. Report each prior finding as resolved or
+  open. A resolved finding never offsets a new one.
+- Eval case `rereview-new-defect-pr`: a fix commit resolves a prior SQL
+  finding and adds shell command interpolation elsewhere.
+
 ## [3.3.20] (2026-09-30)
 
 ### Fixed
