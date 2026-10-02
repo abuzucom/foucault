@@ -30,6 +30,17 @@ TRUSTED_REQUIREMENTS_COMMAND = (
     "python -m pip install --requirement "
     "trusted-base/requirements-checkers.txt"
 )
+# Accepted ahead of the workflow change. pull_request_target validates the
+# head workflow with the base checker, so the checker must accept the hashed
+# install before a pull request can switch the workflow to it.
+HASHED_REQUIREMENTS_COMMAND = (
+    "python -m pip install --require-hashes --requirement "
+    "trusted-base/requirements-checkers.txt"
+)
+TRUSTED_REQUIREMENTS_COMMANDS = (
+    TRUSTED_REQUIREMENTS_COMMAND,
+    HASHED_REQUIREMENTS_COMMAND,
+)
 TRUSTED_SCAN_COMMAND = (
     'python "$TRUSTED_CHECKER" --repo "$PR_REPO" --tree "$PR_HEAD_SHA" '
     '--base "$PR_BASE_SHA" --branch "$PR_HEAD_BRANCH" '
@@ -477,7 +488,9 @@ def _checkout_step(base: bool) -> dict:
     }
 
 
-def _trusted_steps() -> list[dict]:
+def _trusted_steps(
+    requirements_command: str = TRUSTED_REQUIREMENTS_COMMAND,
+) -> list[dict]:
     """Return the exact privileged step sequence allowed for promotion."""
     return [
         _checkout_step(True),
@@ -489,7 +502,7 @@ def _trusted_steps() -> list[dict]:
         },
         {
             "name": "Install trusted checker dependencies",
-            "run": TRUSTED_REQUIREMENTS_COMMAND,
+            "run": requirements_command,
         },
         {
             "name": "Scan immutable pull request objects with the trusted checker",
@@ -499,18 +512,29 @@ def _trusted_steps() -> list[dict]:
     ]
 
 
-def _pull_target_violations(document: dict, text: str, path: str) -> list[str]:
-    """Require the exact closed privileged workflow execution surface."""
-    if not _pull_target_trigger(document):
-        return []
-    expected_job = {
-        "runs-on": "ubuntu-latest",
-        "permissions": {"contents": "read"},
-        "steps": _trusted_steps(),
-    }
-    trusted_job = dict(expected_job)
-    raw_jobs = document.get("jobs")
+def _trusted_jobs(version_text: str) -> list[dict]:
+    """Return every accepted jobs mapping for one normalized Python version."""
+    jobs = []
+    for command in TRUSTED_REQUIREMENTS_COMMANDS:
+        variants = [_trusted_steps(command)]
+        if version_text:
+            pinned_steps = _trusted_steps(command)
+            pinned_steps[2] = dict(pinned_steps[2])
+            pinned_steps[2]["with"] = {"python-version": version_text}
+            variants.append(pinned_steps)
+        for steps in variants:
+            jobs.append({"immutable-compliance": {
+                "runs-on": "ubuntu-latest",
+                "permissions": {"contents": "read"},
+                "steps": steps,
+            }})
+    return jobs
+
+
+def _normalized_candidate_jobs(raw_jobs: object) -> tuple[dict, str]:
+    """Return candidate jobs with the Python version as text, and that version."""
     candidate_job = raw_jobs.get("immutable-compliance") if isinstance(raw_jobs, dict) else None
+    version_text = ""
     if isinstance(candidate_job, dict):
         candidate_job = dict(candidate_job)
         candidate_steps = candidate_job.get("steps")
@@ -519,26 +543,28 @@ def _pull_target_violations(document: dict, text: str, path: str) -> list[str]:
             version = (python_step.get("with", {}).get("python-version")
                        if isinstance(python_step, dict)
                        else None)
-            version_text = str(version) if isinstance(version, (str, float, int)) else ""
-            if PYTHON_VERSION_PATTERN.fullmatch(version_text):
+            candidate_version = str(version) if isinstance(version, (str, float, int)) else ""
+            if PYTHON_VERSION_PATTERN.fullmatch(candidate_version):
+                version_text = candidate_version
                 candidate_steps = list(candidate_steps)
                 python_step = dict(python_step)
                 python_step["with"] = {"python-version": version_text}
                 candidate_steps[2] = python_step
                 candidate_job["steps"] = candidate_steps
-                trusted_steps = _trusted_steps()
-                trusted_steps[2] = dict(trusted_steps[2])
-                trusted_steps[2]["with"] = {"python-version": version_text}
-                trusted_job["steps"] = trusted_steps
     candidate_jobs = dict(raw_jobs) if isinstance(raw_jobs, dict) else {}
     if isinstance(candidate_job, dict):
         candidate_jobs["immutable-compliance"] = candidate_job
-    job_schema_ok = document.get("jobs") in (
-        {"immutable-compliance": expected_job},
-        {"immutable-compliance": trusted_job},
-    ) or candidate_jobs in (
-        {"immutable-compliance": expected_job},
-        {"immutable-compliance": trusted_job},
+    return candidate_jobs, version_text
+
+
+def _pull_target_violations(document: dict, text: str, path: str) -> list[str]:
+    """Require the exact closed privileged workflow execution surface."""
+    if not _pull_target_trigger(document):
+        return []
+    candidate_jobs, version_text = _normalized_candidate_jobs(document.get("jobs"))
+    trusted_jobs = _trusted_jobs(version_text)
+    job_schema_ok = (
+        document.get("jobs") in trusted_jobs or candidate_jobs in trusted_jobs
     )
     allowed_top_keys = {"name", True, "on", "concurrency", "permissions", "env", "jobs"}
     checks = (

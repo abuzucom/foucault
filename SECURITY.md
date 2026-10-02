@@ -39,8 +39,8 @@ diff inspection. It never executes pull request files. Fork pull requests
 receive a skip result and no provider key.
 
 The adapter serializes all provider requests as JSON. It uses argument arrays
-for subprocess calls. It rejects shell syntax, unknown providers, unapproved
-models, and endpoints outside the exact allowlist. Provider failures and
+for subprocess calls. It rejects shell syntax, unknown providers, malformed
+model names, and endpoints outside the exact allowlist. Provider failures and
 malformed reports fail closed.
 
 External providers receive review content. Provider selection and endpoint

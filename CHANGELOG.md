@@ -6,6 +6,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.3.21] (2026-10-02)
+
+### Fixed
+
+- Required a verdict artifact from a trusted caller run before skipping a
+  security review. A forged `security-review` check run no longer skips it.
+- Aligned the response validator with the merge gate on the column-zero
+  final `VERDICT:` line. A malformed final line now fails validation.
+- Parsed the gate verdict token without pathname expansion.
+- Kept one concurrency group per pull request for direct `pull_request`
+  callers of the reusable review workflow.
+- Diffed the review target from the merge base instead of the base tip.
+- Added the policy SHA-256 digest to the production review envelope.
+- Named missing adopter review scripts in a preflight step.
+- Accepted the hash-checked trusted checker install in the immutable
+  compliance schema ahead of the workflow change.
+- Corrected the model-name claim in `SECURITY.md` and documented the review
+  verdict as advisory to human review.
+
 ## [3.3.20] (2026-09-30)
 
 ### Fixed
