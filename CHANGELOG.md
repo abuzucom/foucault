@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.3.15] (2026-10-02)
+
+### Fixed
+
+- Disabled Gemini thinking token generation and filtered thought blocks during
+  response parsing in `ci/call_model.py`.
+- Bounded `git diff` output capture to 2 MB in `ci/build_pr_case.py` to prevent
+  excess memory use on oversized pull requests.
+- Imported `sys` directly in `ci/build_pr_case.py` instead of accessing it
+  through `os.sys`.
+
+### Documentation
+
+- Clarified template scope of non-default provider profiles in
+  `docs/pr-security-review.md`.
+
 ## [3.3.14] (2026-09-21)
 
 ### Changed

@@ -160,7 +160,11 @@ def _build_request(profile: dict[str, Any], system_prompt: str,
         body = {
             "systemInstruction": {"parts": [{"text": system_prompt}]},
             "contents": [{"role": "user", "parts": [{"text": case_text}]}],
-            "generationConfig": {"temperature": 0, "maxOutputTokens": max_tokens},
+            "generationConfig": {
+                "temperature": 0,
+                "maxOutputTokens": max_tokens,
+                "thinkingConfig": {"thinkingBudget": 0},
+            },
         }
     serialized = json.dumps(body, ensure_ascii=True, separators=(",", ":"))
     return Request(
@@ -210,8 +214,16 @@ def _extract_text(protocol: str, result: dict[str, Any]) -> str:
         first = candidates[0] if isinstance(candidates, list) and candidates else None
         content = first.get("content") if isinstance(first, dict) else None
         parts = content.get("parts") if isinstance(content, dict) else None
-        first_part = parts[0] if isinstance(parts, list) and parts else None
-        text = first_part.get("text") if isinstance(first_part, dict) else None
+        if not isinstance(parts, list):
+            parts = []
+        text_parts = [
+            part["text"]
+            for part in parts
+            if isinstance(part, dict)
+            and not part.get("thought")
+            and isinstance(part.get("text"), str)
+        ]
+        text = "".join(text_parts) if text_parts else None
     if not isinstance(text, str) or not text.strip():
         raise ProviderError("provider response has no text content")
     return text

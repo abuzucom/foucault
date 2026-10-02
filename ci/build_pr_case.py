@@ -8,12 +8,14 @@ import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 MAX_METADATA_BYTES = 1_000_000
+MAX_DIFF_BYTES = 2_000_000
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
 REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 
@@ -93,12 +95,23 @@ def build_case() -> dict[str, object]:
     body = pull_request.get("body")
     if not isinstance(title, str) or not isinstance(body, (str, type(None))):
         raise RuntimeError("pull request title or body is invalid")
-    diff = subprocess.run(
+    with subprocess.Popen(
         ["git", "diff", base_sha, head_sha],
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    ) as process:
+        raw_diff = process.stdout.read(MAX_DIFF_BYTES + 1) if process.stdout else b""
+        if len(raw_diff) > MAX_DIFF_BYTES:
+            process.kill()
+            process.wait()
+            raise RuntimeError("pull request diff exceeds the configured limit")
+        process.wait()
+        if process.returncode != 0:
+            raise RuntimeError("git diff command failed")
+    try:
+        diff = raw_diff.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise RuntimeError("pull request diff is not valid UTF-8") from error
     target = "Title: " + title + "\n\n" + (body or "")
     target += "\n\n---\n" + diff
     return {
@@ -121,7 +134,7 @@ def main() -> int:
             encoding="utf-8",
         )
     except (OSError, RuntimeError, subprocess.SubprocessError, ValueError) as error:
-        print(f"case construction failed: {error}", file=os.sys.stderr)
+        print(f"case construction failed: {error}", file=sys.stderr)
         return 1
     return 0
 
