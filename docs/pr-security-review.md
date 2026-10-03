@@ -151,8 +151,10 @@ endpoint, protocol, model, and output limit. The adapter accepts only the four
 exact endpoints in the endpoint allowlist. Endpoint aliases and arbitrary URLs do
 not pass validation.
 
-The active profile uses Ollama and `kimi-k2.7-code`. The caller maps the
-provider-specific repository secret to `MODEL_API_KEY`:
+The active profile uses Ollama and `kimi-k2.7-code`. The other profiles in
+`ci/model_providers.json` serve as adopter-configured templates. Adopters must
+supply valid model identifiers and secrets when activating those profiles. The
+caller maps the provider-specific repository secret to `MODEL_API_KEY`:
 
 ```yaml
 secrets:

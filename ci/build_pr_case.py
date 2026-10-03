@@ -8,6 +8,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import threading
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -213,7 +214,7 @@ def main() -> int:
             encoding="utf-8",
         )
     except (OSError, RuntimeError, subprocess.SubprocessError, ValueError) as error:
-        print(f"case construction failed: {error}", file=os.sys.stderr)
+        print(f"case construction failed: {error}", file=sys.stderr)
         return 1
     return 0
 
