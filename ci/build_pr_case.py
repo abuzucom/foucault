@@ -150,6 +150,18 @@ def _read_bounded_stdout(
         raise RuntimeError("pull request diff is not valid UTF-8") from error
 
 
+def _policy_digest() -> str:
+    """Return the digest of the policy text the adapter sends as the prompt."""
+    path_text = os.environ.get("AUDIT_PROMPT_FILE") or ""
+    if not path_text:
+        raise RuntimeError("AUDIT_PROMPT_FILE is not configured")
+    try:
+        policy = Path(path_text).read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as error:
+        raise RuntimeError("audit policy file is unreadable") from error
+    return _digest(policy)
+
+
 def build_case() -> dict[str, object]:
     """Build one PR envelope from trusted lifecycle data and target evidence."""
     with open(os.environ["EVENT_PATH"], encoding="utf-8") as event_file:
@@ -169,11 +181,15 @@ def build_case() -> dict[str, object]:
     body = pull_request.get("body")
     if not isinstance(title, str) or not isinstance(body, (str, type(None))):
         raise RuntimeError("pull request title or body is invalid")
+    # Three dots diff from the merge base. A two-point diff against a base
+    # that advanced after the branch point also shows those base commits,
+    # reversed, as if the pull request removed them.
     diff = _read_bounded_stdout(
-        ["git", "diff", "--no-ext-diff", "--no-textconv", base_sha, head_sha],
+        ["git", "diff", "--no-ext-diff", "--no-textconv", f"{base_sha}...{head_sha}"],
         MAX_DIFF_BYTES,
         timeout=DEFAULT_DIFF_TIMEOUT_SECONDS,
     )
+    policy_sha256 = _policy_digest()
     target = "Title: " + title + "\n\n" + (body or "")
     target += "\n\n---\n" + diff
     return {
@@ -184,6 +200,7 @@ def build_case() -> dict[str, object]:
             "text": "",
         },
         "REVIEW_TARGET": {"sha256": _digest(target), "text": target},
+        "policy_sha256": policy_sha256,
     }
 
 

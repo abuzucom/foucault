@@ -10,6 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
+  actions: read
   checks: write
   contents: read
   pull-requests: write
@@ -67,9 +68,58 @@ jobs:
               return;
             }
 
-            // One model call per head revision. A completed check run carrying
-            // a verdict means this head was already reviewed. A failed run
-            // carries no verdict, so a flaky review still retries.
+            // One model call per head revision. A check run name and summary
+            // are writable by any workflow token holding checks: write,
+            // including one in a workflow a pull request branch adds. The
+            // check run is therefore only a prefilter. The proof is the
+            // verdict artifact, accepted only from a workflow_run of this
+            // workflow file on the default branch. GitHub runs workflow_run
+            // workflows from the default branch alone, so a pull request
+            // branch cannot produce one. A failed run uploads no record, so
+            // a flaky review still retries.
+            const getRun = async (runId) => {
+              const { data } = await github.rest.actions.getWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: runId,
+              });
+              return data;
+            };
+            const hasTrustedVerdictRecord = async (sha) => {
+              const name = `security-review-verdict-${sha}`;
+              const artifacts = await github.paginate(
+                github.rest.actions.listArtifactsForRepo,
+                {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name,
+                  per_page: 100,
+                },
+              );
+              const records = artifacts.filter((artifact) =>
+                artifact.name === name &&
+                !artifact.expired &&
+                artifact.workflow_run?.id
+              );
+              if (records.length === 0) {
+                return false;
+              }
+              const trustedPath = (await getRun(context.runId)).path;
+              const defaultBranch = context.payload.repository?.default_branch;
+              for (const record of records) {
+                const producer = await getRun(record.workflow_run.id);
+                if (
+                  producer.event === "workflow_run" &&
+                  producer.path === trustedPath &&
+                  Boolean(defaultBranch) &&
+                  producer.head_branch === defaultBranch
+                ) {
+                  return true;
+                }
+              }
+              return false;
+            };
+
             const checkRuns = await github.paginate(
               github.rest.checks.listForRef,
               {
@@ -80,12 +130,14 @@ jobs:
                 per_page: 100,
               },
             );
-            const alreadyReviewed = checkRuns.some((run) =>
+            const hasVerdictCheck = checkRuns.some((run) =>
               run.status === "completed" &&
               /VERDICT: (APPROVE|BLOCK|NEEDS-HUMAN)\b/.test(
                 run.output?.summary || ""
               )
             );
+            const alreadyReviewed = hasVerdictCheck &&
+              await hasTrustedVerdictRecord(headSha);
             core.setOutput("already_reviewed", alreadyReviewed ? "true" : "false");
             core.setOutput(
               "same_repository",
