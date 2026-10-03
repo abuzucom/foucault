@@ -75,7 +75,9 @@ jobs:
   review:
     runs-on: ubuntu-latest
     concurrency:
-      group: security-review-pr-${{ inputs.pr_number }}
+      # A direct pull_request caller passes no pr_number. The event number
+      # keeps each pull request in its own group for both caller styles.
+      group: security-review-pr-${{ inputs.pr_number }}-${{ github.event.pull_request.number }}
       cancel-in-progress: true
     permissions:
       checks: write
@@ -87,6 +89,7 @@ jobs:
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+          INPUT_AUDIT_REF: ${{ inputs.audit_ref }}
           INPUT_BASE_SHA: ${{ inputs.base_sha }}
           INPUT_HEAD_SHA: ${{ inputs.head_sha }}
           INPUT_HEAD_REPO_URL: ${{ inputs.head_repo_url }}
@@ -94,6 +97,7 @@ jobs:
         with:
           script: |
             const shaPattern = /^[0-9a-f]{40}$/;
+            const auditRefPattern = /^[0-9a-f]{40}$/;
             const repositoryPattern = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
             const inputValues = [
               process.env.INPUT_PR_NUMBER,
@@ -124,6 +128,10 @@ jobs:
             };
 
             try {
+              if (!auditRefPattern.test(process.env.INPUT_AUDIT_REF || "")) {
+                throw new Error("audit policy revision is invalid");
+              }
+              core.setOutput("audit_ref", process.env.INPUT_AUDIT_REF);
               if (inputValues.some((value) => value)) {
                 if (inputValues.some((value) => !value)) {
                   throw new Error("resolved pull request metadata is incomplete");
@@ -197,9 +205,35 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: abuzucom/foucault
-          ref: ${{ inputs.audit_ref }}
+          ref: ${{ steps.resolve.outputs.audit_ref }}
           path: .foucault
           persist-credentials: false
+
+      - name: Verify AUDIT.md revision
+        env:
+          EXPECTED_AUDIT_REF: ${{ steps.resolve.outputs.audit_ref }}
+        run: |
+          set -euo pipefail
+          checked_out_sha="$(git -C .foucault rev-parse HEAD)"
+          if [ "$checked_out_sha" != "$EXPECTED_AUDIT_REF" ]; then
+            echo "error: checked out policy SHA $checked_out_sha does not match expected $EXPECTED_AUDIT_REF" >&2
+            exit 1
+          fi
+
+      - name: Verify adopter review scripts
+        run: |
+          set -euo pipefail
+          # Later steps run these scripts from the caller checkout, not from
+          # the pinned .foucault checkout. Name each absent one here instead
+          # of failing later with a less specific error.
+          missing=0
+          for script in ci/build_pr_case.py ci/run_model_command.py scripts/check_pr_review_response.py; do
+            if [ ! -f "$script" ]; then
+              echo "error: $script is missing from the caller checkout; copy it from the pinned foucault commit" >&2
+              missing=1
+            fi
+          done
+          exit "$missing"
 
       - name: Fetch pull request head object
         env:
@@ -233,8 +267,11 @@ jobs:
               if head_repository.casefold() == base_repository.casefold()
               else repository_url
           )
+          # Full history lets the case builder diff from the merge base. The
+          # base checkout already holds every base commit, so only commits
+          # missing from it transfer.
           subprocess.run(
-              ["git", "fetch", "--no-tags", "--depth=1", fetch_source, head_sha],
+              ["git", "fetch", "--no-tags", fetch_source, head_sha],
               check=True,
           )
           PY
@@ -247,6 +284,7 @@ jobs:
           PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}
           PR_REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
+          AUDIT_PROMPT_FILE: .foucault/AUDIT.md
         run: python3 ci/build_pr_case.py
 
       - name: Run model call
@@ -325,10 +363,9 @@ jobs:
           # open on an unrecognized token, because 'VERDICT: REJECT' matches
           # neither alternative and would merge.
           rest="${line#VERDICT:}"
-          # Word splitting is what takes the token off the front here.
-          # shellcheck disable=SC2086
-          set -- $rest
-          verdict_token="${1:-}"
+          # read splits on whitespace without pathname expansion, so a
+          # token such as * stays literal and fails as unrecognized.
+          read -r verdict_token _ <<< "$rest"
           case "$verdict_token" in
             APPROVE)
               echo "blocked=false" >> "$GITHUB_OUTPUT"
@@ -387,6 +424,25 @@ jobs:
               issue_number: Number(process.env.PR_NUMBER),
               body,
             });
+
+      # The caller skips a head that already has a review record. A check
+      # run name and summary are writable by any workflow token holding
+      # checks: write, including one in a workflow a pull request branch
+      # adds. An artifact belongs to the run that uploaded it, so the caller
+      # trusts only this record and verifies the run that produced it.
+      - name: Write verdict record
+        if: ${{ always() && steps.verdict.outputs.line != '' }}
+        env:
+          VERDICT_LINE: ${{ steps.verdict.outputs.line }}
+        run: printf '%s\n' "$VERDICT_LINE" > verdict.txt
+
+      - name: Upload verdict record
+        if: ${{ always() && steps.verdict.outputs.line != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: security-review-verdict-${{ steps.resolve.outputs.head_sha }}
+          path: verdict.txt
+          if-no-files-found: error
 
       - name: Fail on a blocking verdict
         if: ${{ steps.verdict.outputs.blocked == 'true' }}

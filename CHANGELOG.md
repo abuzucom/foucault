@@ -6,14 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
-## [3.3.15] (2026-10-02)
+## [3.4.3] (2026-10-03)
 
 ### Fixed
 
 - Disabled Gemini thinking token generation and filtered thought blocks during
   response parsing in `ci/call_model.py`.
-- Bounded `git diff` output capture to 2 MB in `ci/build_pr_case.py` to prevent
-  excess memory use on oversized pull requests.
 - Imported `sys` directly in `ci/build_pr_case.py` instead of accessing it
   through `os.sys`.
 
@@ -21,6 +19,90 @@ loading `AUDIT.md` into a deployment.
 
 - Clarified template scope of non-default provider profiles in
   `docs/pr-security-review.md`.
+
+## [3.4.2] (2026-10-03)
+
+### Fixed
+
+- Required a verdict artifact from a trusted caller run before skipping a
+  security review. A forged `security-review` check run no longer skips it.
+- Aligned the response validator with the merge gate on the column-zero
+  final `VERDICT:` line. A malformed final line now fails validation.
+- Parsed the gate verdict token without pathname expansion.
+- Kept one concurrency group per pull request for direct `pull_request`
+  callers of the reusable review workflow.
+- Diffed the review target from the merge base instead of the base tip.
+- Added the policy SHA-256 digest to the production review envelope.
+- Named missing adopter review scripts in a preflight step.
+- Accepted the hash-checked trusted checker install in the immutable
+  compliance schema ahead of the workflow change.
+- Corrected the model-name claim in `SECURITY.md` and documented the review
+  verdict as advisory to human review.
+
+## [3.4.1] (2026-10-03)
+
+### Added
+
+- Recorded `abuzucom/xdj-rx3-emu` as an adopter in `adopters/xdj-rx3-emu.md`,
+  pinned at commit `62851df1ef177593adbb9e06b223f5a6dce66fc0` (release
+  3.3.10).
+
+## [3.4.0] (2026-10-02)
+
+### Added
+
+- `AUDIT.md` section 3 re-review rule: run steps 0-8 afresh against the full
+  current diff after new commits. Report each prior finding as resolved or
+  open. A resolved finding never offsets a new one.
+- Eval case `rereview-new-defect-pr`: a fix commit resolves a prior SQL
+  finding and adds shell command interpolation elsewhere.
+
+## [3.3.20] (2026-09-30)
+
+### Fixed
+
+- Bound checked out security review policy revision to validated audit ref.
+- Ensured reader thread termination on pull request diff capture timeout.
+
+## [3.3.19] (2026-09-30)
+
+### Fixed
+
+- Corrected Node argument index mapping in audit revision test helpers.
+
+## [3.3.18] (2026-09-30)
+
+### Fixed
+
+- Verified audit policy revisions against an independent pattern specification.
+
+## [3.3.17] (2026-09-30)
+
+### Fixed
+
+- Validated pull request revisions before invoking git diff.
+- Added timeout enforcement to bounded diff capture.
+- Added behavioral regression coverage for audit revision validation.
+
+## [3.3.16] (2026-09-30)
+
+### Fixed
+
+- Synchronized upstream manifest hash for the adapted changelog.
+
+## [3.3.15] (2026-09-29)
+
+### Added
+
+- Recorded `abuzucom/1a2n-web-visualizer` as an adopter in
+  `adopters/1a2n-web-visualizer.md`, pinned at commit
+  `06d74fba4d9013654cdaf9896bb7535724385186` (release 3.3.14).
+
+### Fixed
+
+- Required a full immutable commit SHA before loading the review policy.
+- Bounded pull request diff capture before review-envelope construction.
+- Required complete machine-readable JSON companion lines during live evaluation.
 
 ## [3.3.14] (2026-09-21)
 

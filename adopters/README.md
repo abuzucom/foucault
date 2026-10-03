@@ -18,3 +18,5 @@ Add `adopters/<repo>.md` with:
 ## Current adopters
 
 - [`agents`](agents.md)
+- [`1a2n-web-visualizer`](1a2n-web-visualizer.md)
+- [`xdj-rx3-emu`](xdj-rx3-emu.md)

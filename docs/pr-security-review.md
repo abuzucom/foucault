@@ -11,20 +11,25 @@ report with a machine-readable verdict. The workflow fails on `BLOCK` or
 1. GitHub starts `immutable-conflict-check.yml` for the pull request event.
 2. GitHub starts `security-review-pr.yml` after that workflow completes.
 3. The trusted workflow-run caller resolves the pull request from `head_sha`.
-   The caller skips the review when a completed `security-review` check run
-   with a verdict already exists for that revision.
+   The caller skips the review only when two records exist for that revision.
+   The first is a completed `security-review` check run with a verdict. The
+   second is a `security-review-verdict-<head_sha>` artifact. A workflow run
+   of the caller file on the default branch must have uploaded that artifact.
 4. The caller checks whether the head repository matches the base repository.
 5. A same-repository pull request calls `security-review.yml`.
 6. The reusable review job allows one active model review per pull request.
    A newer head cancels an obsolete in-progress review.
 7. A fork pull request runs the fork skip job. The skip job receives no secret.
-8. The reusable workflow checks out the base commit.
-9. The workflow fetches the head object without checking it out.
-10. One diff and one review envelope are created.
+8. The reusable workflow checks out the base commit. It verifies that the
+   caller checkout holds every review script.
+9. The workflow fetches the head commits without checking them out.
+10. The case builder creates one merge-base diff and one review envelope. The
+    envelope carries the SHA-256 digest of the loaded policy.
 11. `ci/run_model_command.py` validates the adapter command without a shell.
 12. `ci/call_model.py` sends one request to the active provider.
 13. The workflow validates the report and posts a fenced comment. The comment
-    identifies its base commit, head commit, and workflow run.
+    identifies its base commit, head commit, and workflow run. The workflow
+    then uploads the verdict record artifact.
 14. The final verdict controls the check result.
 15. The workflow publishes a `security-review` check run on the pull request
     head.
@@ -41,6 +46,21 @@ The workflow-run event supplies the head revision. The trusted GitHub API
 resolves one matching pull request and supplies its number and revisions. The
 API request uses the base repository and validated head revision. The
 workflow passes the resolved metadata into the reusable workflow.
+
+Any workflow token with `checks: write` can write a check run name and
+summary. A workflow on a pull request branch holds such a token. The skip
+decision therefore requires the verdict artifact as proof. GitHub runs
+`workflow_run` workflows only from the default branch. A pull request branch
+cannot produce a qualifying artifact.
+
+The model verdict is advisory to human review. Prompt injection in the title,
+body, or diff can steer the model toward `APPROVE`. Never configure
+`security-review` as the only required status. Require a human approval in
+branch protection as well.
+
+The validator and the merge gate read the same line. That line is the last
+line starting with `VERDICT:` at column zero. A malformed final line fails
+validation instead of falling back to an earlier verdict.
 
 The review envelope keeps `TRUSTED_HOOK_CONTEXT` separate from
 `REVIEW_TARGET`. Trusted context cannot support a finding. Findings require a
@@ -60,10 +80,12 @@ commit SHA.
 ### What the adopter supplies
 
 - A caller workflow in the adopter repository.
-- The `ci/` adapter directory at the adopter's base revision. The reusable
-  workflow runs `ci/build_pr_case.py`, `ci/run_model_command.py`, and
-  `ci/call_model.py` from the caller's checkout. Copy the directory from the
-  pinned foucault commit. Keep `ci/model_providers.json` with it.
+- The `ci/` adapter directory and `scripts/check_pr_review_response.py` at
+  the adopter's base revision. The reusable workflow runs
+  `ci/build_pr_case.py`, `ci/run_model_command.py`, `ci/call_model.py`, and
+  `scripts/check_pr_review_response.py` from the caller's checkout. Copy them
+  from the pinned foucault commit. Keep `ci/model_providers.json` with them.
+  A preflight step names any missing script.
 - A provider API key as a repository secret, such as `OLLAMA_API_KEY`.
 - An `adopters/<repo>.md` record per `adopters/README.md`.
 
@@ -73,7 +95,9 @@ into `.foucault` at `audit_ref`.
 ### Caller workflow
 
 Mirror `security-review-pr.yml`. It resolves the pull request after a trusted
-workflow completes, then calls the reusable workflow:
+workflow completes, then calls the reusable workflow. The caller grants
+`actions: read` beside its review permissions. The skip check reads artifacts
+and workflow runs with that permission:
 
 ```yaml
 jobs:
@@ -179,8 +203,9 @@ call a provider once per file or once per finding. The adapter reads each file
 once. It uses dictionary dispatch and set-based endpoint checks.
 
 Response validation compiles patterns once. It scans for the final verdict in
-one pass. It parses the JSON companion once. Input and output limits prevent
-unbounded memory use. The adapter retries a transient request at most once.
+one pass. It parses one complete JSON companion line. Diff capture rejects
+output above 3 MB before envelope construction. The adapter retries a transient
+request at most once.
 
 The workflow does not silently sample an oversized review. It fails closed and
 requires human review when the configured capacity is exceeded.

@@ -4,11 +4,48 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import tempfile
 import unittest
-from unittest.mock import MagicMock, patch
+from pathlib import Path
+from unittest.mock import patch
 
 from ci import build_pr_case
 from ci import call_model
+
+OVERSIZED_DIFF_LIMIT_BYTES = 16
+
+
+def _git(repo: Path, *arguments: str) -> str:
+    """Run Git in an isolated fixture repository and return stdout."""
+    environment = dict(os.environ)
+    environment.update({
+        "GIT_AUTHOR_NAME": "adapter test",
+        "GIT_AUTHOR_EMAIL": "1234567+adapter-test@users.noreply.github.com",
+        "GIT_COMMITTER_NAME": "adapter test",
+        "GIT_COMMITTER_EMAIL": "1234567+adapter-test@users.noreply.github.com",
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_SYSTEM": os.devnull,
+    })
+    result = subprocess.run(
+        ["git", *arguments], cwd=repo, env=environment,
+        capture_output=True, text=True, check=True,
+    )
+    return result.stdout.strip()
+
+
+def _two_commit_repository(repo: Path) -> tuple[str, str]:
+    """Return (base, head) commits whose diff exceeds the lowered limit."""
+    _git(repo, "init", "-q", "-b", "main")
+    (repo / "file.txt").write_text("base\n", encoding="utf-8")
+    _git(repo, "add", "--all")
+    _git(repo, "commit", "-qm", "base")
+    base = _git(repo, "rev-parse", "HEAD")
+    (repo / "file.txt").write_text("head change exceeding the limit\n", encoding="utf-8")
+    _git(repo, "commit", "-qam", "head")
+    return base, _git(repo, "rev-parse", "HEAD")
 
 
 class GeminiThinkingConfigTest(unittest.TestCase):
@@ -68,28 +105,34 @@ class BuildPrCaseDiffBoundTest(unittest.TestCase):
     """build_case bounds git diff output and imports sys directly."""
 
     def test_oversized_diff_raises_runtime_error(self):
-        oversized = b"x" * (build_pr_case.MAX_DIFF_BYTES + 1)
-        mock_proc = MagicMock()
-        mock_proc.stdout.read.return_value = oversized
-        mock_proc.returncode = 0
-        with patch.dict(
-            "os.environ",
-            {
-                "EVENT_PATH": "dummy",
-                "BASE_SHA": "0" * 40,
-                "HEAD_SHA": "1" * 40,
-            },
-        ):
-            with patch(
-                "builtins.open",
-                unittest.mock.mock_open(
-                    read_data=json.dumps({"pull_request": {"title": "T", "body": "B"}})
-                ),
+        # A real repository and the real bounded reader. The byte limit is
+        # lowered so a small fixture diff exceeds it.
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            repo = root / "repo"
+            repo.mkdir()
+            base, head = _two_commit_repository(repo)
+            event_path = root / "event.json"
+            event_path.write_text(
+                json.dumps({"pull_request": {"title": "T", "body": "B"}}),
+                encoding="utf-8",
+            )
+            environment = {
+                "EVENT_PATH": str(event_path),
+                "BASE_SHA": base,
+                "HEAD_SHA": head,
+            }
+            previous = os.getcwd()
+            with patch.dict("os.environ", environment), patch.object(
+                build_pr_case, "MAX_DIFF_BYTES", OVERSIZED_DIFF_LIMIT_BYTES
             ):
-                with patch("subprocess.Popen", return_value=mock_proc):
+                os.chdir(repo)
+                try:
                     with self.assertRaises(RuntimeError) as context:
                         build_pr_case.build_case()
-                    self.assertIn("limit", str(context.exception))
+                finally:
+                    os.chdir(previous)
+        self.assertIn("limit", str(context.exception))
 
     def test_sys_is_imported_directly(self):
         self.assertIn("sys", build_pr_case.__dict__)
