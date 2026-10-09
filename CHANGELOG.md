@@ -6,6 +6,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.4.6] (2026-10-09)
+
+### Fixed
+
+- Refreshed local adaptation hashes after workflow and documentation updates.
+
+## [3.4.5] (2026-10-09)
+
+### Fixed
+
+- Routed label-triggered compliance through the immutable workflow.
+- Refreshed fork labels without changing same-repository review resolution.
+
+## [3.4.4] (2026-10-08)
+
+### Added
+
+- Gated fork reviews on the `safe-to-review` label and the protected
+  `fork-review` environment.
+- Added a label event path that requires successful compliance for the same
+  pull request head.
+
 ## [3.4.3] (2026-10-03)
 
 ### Fixed

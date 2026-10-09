@@ -46,6 +46,11 @@ on:
         required: false
         type: boolean
         default: true
+      fork_review:
+        description: "Run this review through the protected fork-review environment."
+        required: false
+        type: boolean
+        default: false
       pr_number:
         description: "Resolved pull request number for workflow_run callers."
         required: false
@@ -69,10 +74,11 @@ on:
     secrets:
       MODEL_API_KEY:
         description: "Provider API key for the selected trusted adapter."
-        required: true
+        required: false
 
 jobs:
   review:
+    if: inputs.fork_review != true
     runs-on: ubuntu-latest
     concurrency:
       # A direct pull_request caller passes no pr_number. The event number
@@ -83,7 +89,7 @@ jobs:
       checks: write
       contents: read
       pull-requests: write
-    steps:
+    steps: &security_review_steps
       - name: Resolve pull request metadata
         id: resolve
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
@@ -512,3 +518,16 @@ jobs:
                 throw lastError;
               }
             }
+
+  fork-review:
+    if: inputs.fork_review == true
+    runs-on: ubuntu-latest
+    environment: fork-review
+    concurrency:
+      group: security-review-pr-${{ inputs.pr_number }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    permissions:
+      checks: write
+      contents: read
+      pull-requests: write
+    steps: *security_review_steps
