@@ -4,8 +4,6 @@ on:
   workflow_run:
     workflows: [Immutable Compliance]
     types: [completed]
-  pull_request_target:
-    types: [labeled]
 
 concurrency:
   group: security-review-${{ github.event.workflow_run.head_sha }}${{ github.event.pull_request.head.sha }}
@@ -19,7 +17,6 @@ permissions:
 
 jobs:
   resolve-pr:
-    if: github.event_name != 'pull_request_target' || github.event.label.name == 'safe-to-review'
     runs-on: ubuntu-latest
     outputs:
       same_repository: ${{ steps.resolve.outputs.same_repository }}
@@ -37,54 +34,52 @@ jobs:
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
-            const event = context.payload;
-            if (
-              context.eventName === "pull_request_target" &&
-              !(event.label && event.label.name === "safe-to-review")
-            ) {
-              core.setFailed("fork review label event is not authorized");
-              return;
-            }
             const workflowRun = context.payload.workflow_run;
-            const directPullRequest = event.pull_request;
-            const headSha = directPullRequest?.head?.sha || workflowRun?.head_sha;
+            const headSha = workflowRun?.head_sha;
             if (!/^[0-9a-f]{40}$/.test(headSha || "")) {
               core.setFailed("review head SHA is invalid");
               return;
             }
 
             const baseRepository = `${context.repo.owner}/${context.repo.repo}`;
-            let pullRequest = directPullRequest;
-            if (!pullRequest) {
-              const pullRequests = await github.paginate(
-                github.rest.repos.listPullRequestsAssociatedWithCommit,
-                {
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  commit_sha: headSha,
-                  per_page: 100,
-                },
+            const pullRequests = await github.paginate(
+              github.rest.repos.listPullRequestsAssociatedWithCommit,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: headSha,
+                per_page: 100,
+              },
+            );
+            const candidates = pullRequests.filter((candidate) =>
+              candidate.base?.repo?.full_name?.toLowerCase() ===
+              baseRepository.toLowerCase() &&
+              candidate.head?.sha?.toLowerCase() === headSha.toLowerCase()
+            );
+            if (candidates.length !== 1) {
+              core.setFailed(
+                `expected one pull request for review head, found ${candidates.length}`,
               );
-              const candidates = pullRequests.filter((candidate) =>
-                candidate.base?.repo?.full_name?.toLowerCase() ===
-                baseRepository.toLowerCase() &&
-                candidate.head?.sha?.toLowerCase() === headSha.toLowerCase()
-              );
-              if (candidates.length !== 1) {
-                core.setFailed(
-                  `expected one pull request for review head, found ${candidates.length}`,
-                );
-                return;
-              }
-              pullRequest = candidates[0];
+              return;
             }
 
-            const currentPullRequest = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: pullRequest.number,
-            });
-            pullRequest = currentPullRequest.data;
+            let pullRequest = candidates[0];
+            const candidateHeadRepository = pullRequest.head?.repo;
+            if (!candidateHeadRepository?.full_name) {
+              core.setFailed("pull request head repository metadata is unavailable");
+              return;
+            }
+            const sameRepository =
+              candidateHeadRepository.full_name.toLowerCase() ===
+              baseRepository.toLowerCase();
+            if (!sameRepository) {
+              const currentPullRequest = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pullRequest.number,
+              });
+              pullRequest = currentPullRequest.data;
+            }
             const headRepository = pullRequest.head?.repo;
             if (!headRepository?.full_name || !headRepository.clone_url) {
               core.setFailed("pull request head repository metadata is unavailable");
@@ -99,36 +94,13 @@ jobs:
               return;
             }
 
-            const sameRepository =
-              headRepository.full_name.toLowerCase() === baseRepository.toLowerCase();
             const forkReviewApproved = !sameRepository &&
               (pullRequest.labels || []).some((label) =>
                 label.name === "safe-to-review"
               );
-            let compliancePassed = true;
-            if (context.eventName === "pull_request_target") {
-              const complianceRuns = await github.paginate(
-                github.rest.actions.listWorkflowRuns,
-                {
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  workflow_id: "immutable-conflict-check.yml",
-                  head_sha: headSha,
-                  per_page: 100,
-                },
-              );
-              const matchingRuns = complianceRuns
-                .filter((run) =>
-                  run.path === ".github/workflows/immutable-conflict-check.yml" &&
-                  run.event === "pull_request_target" &&
-                  run.head_sha?.toLowerCase() === headSha.toLowerCase()
-                )
-                .sort((left, right) =>
-                  Date.parse(right.created_at) - Date.parse(left.created_at)
-                );
-              compliancePassed = matchingRuns[0]?.status === "completed" &&
-                matchingRuns[0]?.conclusion === "success";
-            }
+            const compliancePassed = workflowRun?.name === "Immutable Compliance" &&
+              workflowRun?.head_sha?.toLowerCase() === headSha.toLowerCase() &&
+              workflowRun?.conclusion === "success";
 
             // One model call per head revision. A check run name and summary
             // are writable by any workflow token holding checks: write,
@@ -215,7 +187,7 @@ jobs:
 
   review:
     needs: resolve-pr
-    if: github.event_name != 'pull_request_target' && needs.resolve-pr.result == 'success' && needs.resolve-pr.outputs.same_repository == 'true' && needs.resolve-pr.outputs.already_reviewed != 'true'
+    if: needs.resolve-pr.result == 'success' && needs.resolve-pr.outputs.same_repository == 'true' && needs.resolve-pr.outputs.already_reviewed != 'true'
     uses: ./.github/workflows/security-review.yml
     with:
       # Foucault 3.0.2 policy revision.

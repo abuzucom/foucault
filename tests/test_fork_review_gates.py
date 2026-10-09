@@ -6,6 +6,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CALLER_PATH = REPO_ROOT / ".github" / "workflows" / "security-review-pr.yml"
+COMPLIANCE_PATH = REPO_ROOT / ".github" / "workflows" / "immutable-conflict-check.yml"
 REVIEW_PATH = REPO_ROOT / ".github" / "workflows" / "security-review.yml"
 DOC_PATH = REPO_ROOT / "docs" / "pr-security-review.md"
 
@@ -15,13 +16,18 @@ class ForkReviewGateTest(unittest.TestCase):
 
     def setUp(self):
         self.caller = CALLER_PATH.read_text(encoding="utf-8")
+        self.compliance = COMPLIANCE_PATH.read_text(encoding="utf-8")
         self.review = REVIEW_PATH.read_text(encoding="utf-8")
         self.docs = DOC_PATH.read_text(encoding="utf-8")
 
     def test_label_event_retries_only_approved_fork_reviews(self):
-        self.assertIn("pull_request_target:", self.caller)
-        self.assertIn("types: [labeled]", self.caller)
-        self.assertIn('event.label.name === "safe-to-review"', self.caller)
+        self.assertIn("pull_request_target:", self.compliance)
+        self.assertIn(
+            "types: [opened, synchronize, reopened, ready_for_review, edited, "
+            "converted_to_draft, labeled]",
+            self.compliance,
+        )
+        self.assertIn("workflow_run:", self.caller)
         self.assertIn('label.name === "safe-to-review"', self.caller)
         self.assertIn("fork_review_approved", self.caller)
         self.assertIn("compliance_passed", self.caller)

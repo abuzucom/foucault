@@ -8,20 +8,18 @@ report with a machine-readable verdict. The workflow fails on `BLOCK` or
 
 ## Event flow
 
-1. GitHub starts `immutable-conflict-check.yml` for the pull request event.
+1. GitHub starts `immutable-conflict-check.yml` for pull request changes and
+   when a maintainer applies a label.
 2. GitHub starts `security-review-pr.yml` after that workflow completes.
-3. Applying `safe-to-review` to a fork pull request also starts
-   `security-review-pr.yml` from the base repository's default branch.
-4. The caller resolves the pull request from the workflow-run head or the
-   labeled pull request event.
+3. The caller resolves the pull request from the workflow-run head.
    The caller skips the review only when two records exist for that revision.
    The first is a completed `security-review` check run with a verdict. The
    second is a `security-review-verdict-<head_sha>` artifact. A workflow run
    of the caller file on the default branch must have uploaded that artifact.
-5. For label events, the caller requires a successful
-   `Immutable Compliance` run for the same head revision.
-6. The caller checks whether the head repository matches the base repository
-   and reads its current labels from the GitHub API.
+5. The caller requires a successful `Immutable Compliance` run for the same
+   head revision.
+6. The caller checks whether the head repository matches the base repository.
+   The caller refreshes current labels from the GitHub API for fork PRs.
 7. A same-repository pull request calls `security-review.yml` on the existing
    path.
 8. A fork pull request calls `security-review.yml` only after

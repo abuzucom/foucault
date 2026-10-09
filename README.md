@@ -69,9 +69,10 @@ allowing tables and exact-format output lines.
 the reusable workflow after the trusted immutable compliance workflow
 completes. The workflow reads the base revision, fetches the pull request head
 without checking it out, and builds one provenance-labeled review envelope.
-Fork reviews wait for the `safe-to-review` label. Approved fork reviews wait
-for maintainer approval in the protected `fork-review` environment before the
-model job receives `MODEL_API_KEY`.
+Fork reviews wait for the `safe-to-review` label. Applying the label runs the
+immutable compliance workflow before review resolution. Approved fork reviews
+wait for maintainer approval in the protected `fork-review` environment before
+the model job receives `MODEL_API_KEY`.
 
 [`security-review.yml`](.github/workflows/security-review.yml) loads the
 immutable `AUDIT.md` revision, calls the configured provider adapter, posts a
