@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.4.6] (2026-10-09)
+
+### Fixed
+
+- Refreshed local adaptation hashes after workflow and documentation updates.
+
 ## [3.4.5] (2026-10-09)
 
 ### Fixed
