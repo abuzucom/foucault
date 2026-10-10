@@ -1,0 +1,16 @@
+--- /dev/null
++++ b/app/reports/archive.py
+@@ -0,0 +1,12 @@
++import csv
++import subprocess
++
++REPORT_DIR = "/var/app/reports"
++
++
++def compress_report(rows, filename):
++    path = f"{REPORT_DIR}/{filename}"
++    with open(path, "w", newline="") as handle:
++        writer = csv.writer(handle)
++        writer.writerows(rows)
++    subprocess.run(f"gzip -f {path}", shell=True, check=True)
++    return path + ".gz"
