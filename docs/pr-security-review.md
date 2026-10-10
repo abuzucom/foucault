@@ -8,35 +8,50 @@ report with a machine-readable verdict. The workflow fails on `BLOCK` or
 
 ## Event flow
 
-1. GitHub starts `immutable-conflict-check.yml` for the pull request event.
+1. GitHub starts `immutable-conflict-check.yml` for pull request changes and
+   when a maintainer applies a label.
 2. GitHub starts `security-review-pr.yml` after that workflow completes.
-3. The trusted workflow-run caller resolves the pull request from `head_sha`.
+3. The caller resolves the pull request from the workflow-run head.
    The caller skips the review only when two records exist for that revision.
    The first is a completed `security-review` check run with a verdict. The
    second is a `security-review-verdict-<head_sha>` artifact. A workflow run
    of the caller file on the default branch must have uploaded that artifact.
-4. The caller checks whether the head repository matches the base repository.
-5. A same-repository pull request calls `security-review.yml`.
-6. The reusable review job allows one active model review per pull request.
+5. The caller requires a successful `Immutable Compliance` run for the same
+   head revision.
+6. The caller checks whether the head repository matches the base repository.
+   The caller refreshes current labels from the GitHub API for fork PRs.
+7. A same-repository pull request calls `security-review.yml` on the existing
+   path.
+8. A fork pull request calls `security-review.yml` only after
+   `safe-to-review` appears on the pull request.
+9. The fork model job waits for approval in the `fork-review` environment.
+   The environment supplies `MODEL_API_KEY` after approval.
+10. Each reusable workflow path allows one active model review per pull request.
    A newer head cancels an obsolete in-progress review.
-7. A fork pull request runs the fork skip job. The skip job receives no secret.
-8. The reusable workflow checks out the base commit. It verifies that the
+11. An unlabeled fork pull request runs the skip job. The skip job receives no
+    provider secret.
+12. The reusable workflow checks out the base commit. It verifies that the
    caller checkout holds every review script.
-9. The workflow fetches the head commits without checking them out.
-10. The case builder creates one merge-base diff and one review envelope. The
+13. The workflow fetches the head commits without checking them out.
+14. The case builder creates one merge-base diff and one review envelope. The
     envelope carries the SHA-256 digest of the loaded policy.
-11. `ci/run_model_command.py` validates the adapter command without a shell.
-12. `ci/call_model.py` sends one request to the active provider.
-13. The workflow validates the report and posts a fenced comment. The comment
+15. `ci/run_model_command.py` validates the adapter command without a shell.
+16. `ci/call_model.py` sends one request to the active provider.
+17. The workflow validates the report and posts a fenced comment. The comment
     identifies its base commit, head commit, and workflow run. The workflow
     then uploads the verdict record artifact.
-14. The final verdict controls the check result.
-15. The workflow publishes a `security-review` check run on the pull request
+18. The final verdict controls the check result.
+19. The workflow publishes a `security-review` check run on the pull request
     head.
 
 ## Trust boundary
 
-Fork pull requests receive a skip result and no provider secret.
+Fork pull requests receive no review until a maintainer applies
+`safe-to-review`. The fork job uses the protected `fork-review` environment.
+Configure that environment with required reviewers from maintainers and a
+`MODEL_API_KEY` environment secret. Store the fork-review key only in that
+environment. The fork caller passes no provider secret to the reusable
+workflow. The fork job receives the environment secret after approval.
 
 The workflow-run caller runs with default-branch code. Pull request files
 remain review data. The workflow never executes a pull request file. The
@@ -92,7 +107,10 @@ commit SHA.
   `scripts/check_pr_review_response.py` from the caller's checkout. Copy them
   from the pinned foucault commit. Keep `ci/model_providers.json` with them.
   A preflight step names any missing script.
-- A provider API key as a repository secret, such as `OLLAMA_API_KEY`.
+- A provider API key as a repository secret, such as `OLLAMA_API_KEY`, for
+  same-repository reviews.
+- A `fork-review` environment with required reviewers and a `MODEL_API_KEY`
+  environment secret for fork reviews.
 - An `adopters/<repo>.md` record per `adopters/README.md`.
 
 Only `AUDIT.md` comes from foucault at runtime. The workflow checks it out
@@ -119,9 +137,16 @@ jobs:
       head_sha: ${{ needs.resolve-pr.outputs.head_sha }}
       head_repo_url: ${{ needs.resolve-pr.outputs.head_repo_url }}
       head_repo_full_name: ${{ needs.resolve-pr.outputs.head_repo_full_name }}
+      fork_review: false
     secrets:
       MODEL_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
 ```
+
+Add a second reusable workflow call for approved forks. Set `fork_review: true`
+on that call. The reusable workflow assigns its fork job to `fork-review`.
+Omit the `secrets:` mapping on that call. GitHub waits for a required reviewer
+before starting that job. Applying the label does not bypass the successful
+`Immutable Compliance` requirement.
 
 The `workflow_run` trigger keeps the caller on default-branch code. A pull
 request cannot edit the reviewer. Copy `security-review-pr.yml` and change
@@ -139,8 +164,9 @@ pattern, or require review for workflow changes in branch protection.
 - Map only the provider secret. Never use inherited secrets. The job sends an
   untrusted diff to a provider. Inherited secrets hand every repository secret
   to that path.
-- Fork pull requests receive no secrets from GitHub. The fork skip needs no
-  adopter action when the caller mirrors `security-review-pr.yml`.
+- The caller maps `MODEL_API_KEY` from a repository secret for same-repository
+  reviews. The fork environment stores its own `MODEL_API_KEY` value.
+- The fork skip job runs until the maintainer applies `safe-to-review`.
 
 ### Verify the wiring
 
