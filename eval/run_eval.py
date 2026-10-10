@@ -30,6 +30,15 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.check_pr_review_response import (
+    PRIOR_FINDING_STATUS_PATTERN,
+    ResponseError,
+    validate_response,
+)
+
 AUDIT_PATH = REPO_ROOT / "AUDIT.md"
 CASES_DIR = Path(__file__).resolve().parent / "cases"
 
@@ -100,6 +109,8 @@ def load_case(case_dir: Path) -> dict:
         raise CaseError(
             f"{case_dir.name}: mode '{expected['mode']}' not one of {sorted(VALID_MODES)}"
         )
+    if "report_contract" in expected:
+        _validate_report_contract(case_dir.name, expected)
 
     input_files = [
         case_dir / name for name in CASE_INPUT_NAMES if (case_dir / name).is_file()
@@ -121,6 +132,49 @@ def load_case(case_dir: Path) -> dict:
         "case_text": case_text,
         "hook_context": hook_context,
     }
+
+
+def _validate_report_contract(case_name: str, expected: dict) -> None:
+    """Validate optional PR report requirements in one case."""
+    contract = expected["report_contract"]
+    if expected["mode"] != "PR" or expected.get("expect_json") is not True:
+        raise CaseError(
+            f"{case_name}: report_contract requires a JSON-enabled PR case"
+        )
+    if not isinstance(contract, dict):
+        raise CaseError(f"{case_name}: report_contract must be an object")
+    if set(contract) != {
+        "forbid_process_narration",
+        "require_prior_finding_status",
+        "required_finding",
+    }:
+        raise CaseError(f"{case_name}: report_contract has an invalid shape")
+    if contract.get("forbid_process_narration") is not True:
+        raise CaseError(
+            f"{case_name}: report_contract must forbid process narration"
+        )
+    if contract.get("require_prior_finding_status") is not True:
+        raise CaseError(
+            f"{case_name}: report_contract must require prior finding status"
+        )
+    finding = contract.get("required_finding")
+    if not isinstance(finding, dict) or set(finding) != {"class", "file", "line"}:
+        raise CaseError(f"{case_name}: required_finding has an invalid shape")
+    expected_classes = expected["expected_classes"]
+    if not isinstance(expected_classes, list):
+        raise CaseError(f"{case_name}: expected_classes must be a list")
+    if not isinstance(finding["class"], str) or finding["class"] not in expected_classes:
+        raise CaseError(
+            f"{case_name}: required_finding class must appear in expected_classes"
+        )
+    if not isinstance(finding["file"], str) or not finding["file"]:
+        raise CaseError(f"{case_name}: required_finding file is invalid")
+    if (
+        not isinstance(finding["line"], int)
+        or isinstance(finding["line"], bool)
+        or finding["line"] < 1
+    ):
+        raise CaseError(f"{case_name}: required_finding line is invalid")
 
 
 def discover_cases(only: str | None = None) -> list[dict]:
@@ -194,6 +248,34 @@ def json_companion_ok(response_text: str) -> tuple[bool, str]:
     return False, "no VERDICT_JSON: line found"
 
 
+def report_contract_result(expected: dict, response_text: str) -> tuple[bool, str]:
+    """Score narration, prior-finding status, and required finding evidence."""
+    contract = expected.get("report_contract")
+    if not contract:
+        return True, "no additional report contract"
+    try:
+        _verdict, payload = validate_response(response_text)
+    except (ResponseError, UnicodeError) as error:
+        return False, f"invalid PR report: {error}"
+
+    failures = []
+    if not PRIOR_FINDING_STATUS_PATTERN.search(response_text):
+        failures.append("prior finding status is absent")
+    required = contract["required_finding"]
+    has_finding = any(
+        finding.get("class") == required["class"]
+        and finding.get("file") == required["file"]
+        and finding.get("line") == required["line"]
+        for finding in payload["findings"]
+        if isinstance(finding, dict)
+    )
+    if not has_finding:
+        failures.append("required finding evidence is absent")
+    if failures:
+        return False, "; ".join(failures)
+    return True, "report contract passed"
+
+
 def resolve_model_call(spec: str):
     module_name, _, func_name = spec.partition(":")
     if not module_name or not func_name:
@@ -231,6 +313,7 @@ def main() -> int:
     model_call = resolve_model_call(args.model_call)
 
     failures = 0
+    checks = len(cases)
     for case in cases:
         envelope = build_review_envelope(case, system_prompt)
         response = model_call(
@@ -246,14 +329,27 @@ def main() -> int:
             failures += 1
 
         if case["expected"].get("expect_json"):
+            checks += 1
             json_ok, json_detail = json_companion_ok(response)
             json_status = "pass" if json_ok else "FAIL"
             print(f"  {json_status}  {case['name']} (VERDICT_JSON): {json_detail}")
             if not json_ok:
                 failures += 1
 
-    total = len(cases)
-    print(f"\n{total - failures}/{total} verdict checks passed")
+        if case["expected"].get("report_contract"):
+            checks += 1
+            report_ok, report_detail = report_contract_result(
+                case["expected"], response
+            )
+            report_status = "pass" if report_ok else "FAIL"
+            print(
+                f"  {report_status}  {case['name']} (report contract): "
+                f"{report_detail}"
+            )
+            if not report_ok:
+                failures += 1
+
+    print(f"\n{checks - failures}/{checks} response checks passed")
     return 1 if failures else 0
 
 

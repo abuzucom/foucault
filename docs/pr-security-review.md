@@ -77,6 +77,12 @@ The validator and the merge gate read the same line. That line is the last
 line starting with `VERDICT:` at column zero. A malformed final line fails
 validation instead of falling back to an earlier verdict.
 
+The response validator rejects common first-person process narration,
+self-directed questions, and self-instructions. It requires the JSON companion
+to follow the final verdict directly and end the report. Fenced code and
+blockquote lines remain available for quoted review-target evidence. Phrase
+matching acts as a backstop. `AUDIT.md` defines the full reporting contract.
+
 The review envelope keeps `TRUSTED_HOOK_CONTEXT` separate from
 `REVIEW_TARGET`. Trusted context cannot support a finding. Findings require a
 location in the review target. Missing or ambiguous provenance requires
@@ -246,6 +252,7 @@ The following conditions fail the job:
 - provider timeout or exhausted retry;
 - missing or malformed `VERDICT` line after one retry;
 - missing or mismatched `VERDICT_JSON` block;
+- process narration or text after the final JSON companion;
 - `BLOCK` verdict;
 - `NEEDS-HUMAN` verdict when `fail_on_block` is true.
 
