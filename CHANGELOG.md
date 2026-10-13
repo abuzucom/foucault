@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.4.7] (2026-10-13)
+
+### Security
+
+- Pinned the PyYAML checker dependency to sha256 hashes. Every
+  `requirements-checkers.txt` install now runs in pip hash-checking mode.
+- Added a test that rejects checker requirements without an exact version
+  and sha256 hashes.
+
 ## [3.4.6] (2026-10-09)
 
 ### Fixed
