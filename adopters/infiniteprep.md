@@ -8,7 +8,7 @@ record assumes.
 `abuzucom/infiniteprep` pins `AUDIT.md` and the reusable
 `.github/workflows/security-review.yml` to the same commit,
 `c398b5a29890ba01dee5065a7dc97a91e3e2b08b` (release 3.4.7). The wiring
-lands in draft pull request abuzucom/infiniteprep#1.
+landed in pull request abuzucom/infiniteprep#1.
 
 ## Wiring
 
