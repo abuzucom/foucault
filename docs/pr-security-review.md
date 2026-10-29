@@ -210,6 +210,7 @@ rules:
   written before the field existed keep their prior behavior.
 - An HTTP 400 or 413 from the active profile retries once on the large
   profile when the input fits there.
+- An HTTP 400 or 413 from the large profile exits with code 3.
 - An input above every budget exits with code 3.
 
 The shipped budgets follow:
