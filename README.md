@@ -78,7 +78,9 @@ the model job receives `MODEL_API_KEY`.
 immutable `AUDIT.md` revision, calls the configured provider adapter, posts a
 fenced report, and gates on the final `VERDICT` line. The adapter reads the
 provider profile from [`ci/model_providers.json`](ci/model_providers.json).
-The active profile uses Ollama with `kimi-k2.7-code`.
+The active profile uses Ollama with `kimi-k2.7-code`. Diffs above its input
+budget route to `minimax-m3.1-flash`. A diff above every budget receives a
+fixed `NEEDS-HUMAN` verdict instead of no verdict.
 
 The caller maps one provider-specific repository secret, such as
 `OLLAMA_API_KEY`, to the reusable workflow's `MODEL_API_KEY` secret. Provider
