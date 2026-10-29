@@ -376,11 +376,14 @@ def call_model(system_prompt: str, mode: str, case_text: str) -> str:
         return _send_large(profile, system_prompt, case_text, api_key)
     try:
         return _send(profile, system_prompt, case_text, api_key)
-    except ContextOverflowError:
+    except ContextOverflowError as error:
         # The character estimate can undercount a dense tokenizer. A context
-        # rejection gets one attempt on the large-input model.
+        # rejection gets one attempt on the large-input model. Without one,
+        # the review exceeds every configured model.
         if large is None or not _fits(large, estimated_tokens):
-            raise
+            raise InputTooLargeError(
+                "review input exceeds every configured model context"
+            ) from error
     return _send_large(large, system_prompt, case_text, api_key)
 
 

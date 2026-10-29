@@ -150,10 +150,28 @@ class ContextOverflowFallbackTest(unittest.TestCase):
             [self._http_error(413), _FakeResponse("large reply")])
         self.assertEqual(text, "large reply")
 
-    def test_http_400_without_large_model_fails(self):
-        with self.assertRaises(call_model.ProviderError) as context:
+    def test_http_400_without_large_model_is_capacity_error(self):
+        with self.assertRaises(call_model.InputTooLargeError):
             self._call([self._http_error(400)], large=False)
-        self.assertNotIsInstance(context.exception, call_model.InputTooLargeError)
+
+    def test_http_413_when_large_budget_is_exceeded_is_capacity_error(self):
+        # The active profile has no budget and accepts any estimate. The
+        # large budget cannot hold it, so no retry target exists.
+        requests = []
+
+        def fake_urlopen(request, timeout):
+            del timeout
+            requests.append(json.loads(request.data.decode("utf-8")))
+            raise self._http_error(413)
+
+        case_text = "c" * (3 * LARGE_BUDGET_TOKENS)
+        with patch.dict("os.environ", {"MODEL_API_KEY": "synthetic"}), \
+                patch.object(call_model, "_load_config",
+                             return_value=_config(active_budget=None)), \
+                patch.object(call_model, "urlopen", fake_urlopen):
+            with self.assertRaises(call_model.InputTooLargeError):
+                call_model.call_model("p", "PR", case_text)
+        self.assertEqual([body["model"] for body in requests], ["review-model"])
 
     def test_large_model_rejection_after_fallback_is_capacity_error(self):
         with self.assertRaises(call_model.InputTooLargeError):
