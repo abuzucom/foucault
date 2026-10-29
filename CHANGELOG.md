@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.5.0] (2026-10-29)
+
+### Added
+
+- Added optional `max_input_tokens` budgets per provider profile and a
+  `large_input_provider` key in `ci/model_providers.json`.
+- Routed review input above the `kimi-k2.7-code` budget to the
+  `ollama-large` profile with `minimax-m3.1-flash`.
+- Retried an HTTP 400 or 413 context rejection once on the large profile.
+
+### Fixed
+
+- Recorded a fixed `NEEDS-HUMAN` verdict for a diff above 3 MB or above every
+  model budget. Such pull requests previously received no verdict and stayed
+  blocked.
+
 ## [3.4.8] (2026-10-28)
 
 ### Added

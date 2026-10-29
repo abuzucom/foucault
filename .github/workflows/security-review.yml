@@ -283,6 +283,7 @@ jobs:
           PY
 
       - name: Build provenance-labeled case text
+        id: case
         env:
           EVENT_PATH: ${{ github.event_path }}
           BASE_SHA: ${{ steps.resolve.outputs.base_sha }}
@@ -291,10 +292,21 @@ jobs:
           PR_REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
           AUDIT_PROMPT_FILE: .foucault/AUDIT.md
-        run: python3 ci/build_pr_case.py
+        run: |
+          set -euo pipefail
+          # Exit code 3 means the diff exceeds review capacity. The capacity
+          # report step then records NEEDS-HUMAN instead of no verdict.
+          status=0
+          python3 ci/build_pr_case.py || status=$?
+          if [ "$status" -eq 3 ]; then
+            echo "oversized=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          exit "$status"
 
       - name: Run model call
         id: model
+        if: ${{ steps.case.outputs.oversized != 'true' }}
         env:
           AUDIT_PROMPT_FILE: .foucault/AUDIT.md
           CASE_TEXT_FILE: case_text.txt
@@ -302,11 +314,38 @@ jobs:
           MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
         run: |
           set -euo pipefail
-          python3 ci/run_model_command.py "$MODEL_CALL_COMMAND" > response.txt
+          # Exit code 3 means the input exceeds every configured model
+          # budget. The capacity report step then records NEEDS-HUMAN.
+          status=0
+          python3 ci/run_model_command.py "$MODEL_CALL_COMMAND" > response.txt || status=$?
+          if [ "$status" -eq 3 ]; then
+            echo "oversized=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
           if ! python3 scripts/check_pr_review_response.py response.txt > /dev/null; then
             echo "first response failed validation; one retry" >&2
             python3 ci/run_model_command.py "$MODEL_CALL_COMMAND" > response.txt
           fi
+
+      # Fixed text only. The report quotes nothing from the pull request. An
+      # author cannot shape the verdict this step records.
+      - name: Write capacity review report
+        if: ${{ steps.case.outputs.oversized == 'true' || steps.model.outputs.oversized == 'true' }}
+        run: |
+          set -euo pipefail
+          cat > response.txt <<'REPORT'
+          Security review: not performed
+
+          The pull request diff exceeds the input budget of every configured
+          review model. The automated review covered no files. A human
+          reviewer must assess the complete diff before merge.
+
+          VERDICT_JSON: {"mode": "PR", "verdict": "NEEDS-HUMAN", "findings": []}
+          VERDICT: NEEDS-HUMAN - diff exceeds automated review capacity
+          REPORT
 
       - name: Validate report structure
         id: validate
