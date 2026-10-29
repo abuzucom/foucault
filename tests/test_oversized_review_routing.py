@@ -155,6 +155,29 @@ class ContextOverflowFallbackTest(unittest.TestCase):
             self._call([self._http_error(400)], large=False)
         self.assertNotIsInstance(context.exception, call_model.InputTooLargeError)
 
+    def test_large_model_rejection_after_fallback_is_capacity_error(self):
+        with self.assertRaises(call_model.InputTooLargeError):
+            self._call([self._http_error(400), self._http_error(413)])
+
+    def test_large_model_rejection_on_direct_route_is_capacity_error(self):
+        # The case is routed to the large profile by size alone. The
+        # estimate for "p" plus a long case exceeds the active budget.
+        requests = []
+
+        def fake_urlopen(request, timeout):
+            del timeout
+            requests.append(json.loads(request.data.decode("utf-8")))
+            raise self._http_error(400)
+
+        case_text = "c" * (3 * ACTIVE_BUDGET_TOKENS)
+        with patch.dict("os.environ", {"MODEL_API_KEY": "synthetic"}), \
+                patch.object(call_model, "_load_config",
+                             return_value=_config()), \
+                patch.object(call_model, "urlopen", fake_urlopen):
+            with self.assertRaises(call_model.InputTooLargeError):
+                call_model.call_model("p", "PR", case_text)
+        self.assertEqual([body["model"] for body in requests], ["large-model"])
+
     def test_http_401_does_not_switch_models(self):
         with self.assertRaises(call_model.ProviderError):
             self._call([self._http_error(401)])

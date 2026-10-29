@@ -346,6 +346,21 @@ def _send(profile: dict[str, Any], system_prompt: str, case_text: str,
     raise ProviderError("provider request failed after one retry")
 
 
+def _send_large(profile: dict[str, Any], system_prompt: str, case_text: str,
+                api_key: str) -> str:
+    """Return the large profile's response or report a capacity failure.
+
+    No larger model exists. A context rejection here means the review
+    exceeds every configured model and needs a recorded NEEDS-HUMAN.
+    """
+    try:
+        return _send(profile, system_prompt, case_text, api_key)
+    except ContextOverflowError as error:
+        raise InputTooLargeError(
+            "review input exceeds the large-input model context"
+        ) from error
+
+
 def call_model(system_prompt: str, mode: str, case_text: str) -> str:
     """Return the configured provider response for one evaluator request."""
     del mode
@@ -356,19 +371,17 @@ def call_model(system_prompt: str, mode: str, case_text: str) -> str:
         raise ProviderError("MODEL_API_KEY is not configured")
     estimated_tokens = estimate_tokens(system_prompt, case_text)
     profile = select_profile(estimated_tokens)
+    large = _large_profile()
+    if large is not None and large["name"] == profile["name"]:
+        return _send_large(profile, system_prompt, case_text, api_key)
     try:
         return _send(profile, system_prompt, case_text, api_key)
     except ContextOverflowError:
         # The character estimate can undercount a dense tokenizer. A context
         # rejection gets one attempt on the large-input model.
-        large = _large_profile()
-        if (
-            large is None
-            or large["name"] == profile["name"]
-            or not _fits(large, estimated_tokens)
-        ):
+        if large is None or not _fits(large, estimated_tokens):
             raise
-    return _send(large, system_prompt, case_text, api_key)
+    return _send_large(large, system_prompt, case_text, api_key)
 
 
 def main() -> int:
