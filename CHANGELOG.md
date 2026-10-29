@@ -21,8 +21,8 @@ loading `AUDIT.md` into a deployment.
 - Recorded a fixed `NEEDS-HUMAN` verdict for a diff above 3 MB or above every
   model budget. Such pull requests previously received no verdict and stayed
   blocked.
-- Recorded the same verdict when the large profile rejects the input with
-  HTTP 400 or 413.
+- Recorded the same verdict for an HTTP 400 or 413 with no larger profile to
+  retry. Registries without `large_input_provider` also receive it.
 - Refreshed the `CHANGELOG.md` and `README.md` hashes in
   `upstream-files.json`.
 

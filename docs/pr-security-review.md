@@ -207,10 +207,12 @@ rules:
 - An input within the active budget goes to the active profile.
 - A larger input within the large budget goes to the large profile.
 - A profile without `max_input_tokens` receives every input. Registries
-  written before the field existed keep their prior behavior.
+  written before the field existed keep their prior routing.
 - An HTTP 400 or 413 from the active profile retries once on the large
   profile when the input fits there.
-- An HTTP 400 or 413 from the large profile exits with code 3.
+- An HTTP 400 or 413 with no larger profile to retry exits with code 3.
+  A configuration error that returns HTTP 400 therefore also records
+  `NEEDS-HUMAN`. The job log keeps the HTTP status.
 - An input above every budget exits with code 3.
 
 The shipped budgets follow:
