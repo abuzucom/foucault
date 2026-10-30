@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
-## [3.5.0] (2026-10-10)
+## [3.6.0] (2026-10-30)
 
 ### Added
 
@@ -16,6 +16,45 @@ loading `AUDIT.md` into a deployment.
 ### Changed
 
 - Required PR reports to contain conclusions and evidence without process narration.
+- Placed `VERDICT_JSON` after the `VERDICT` line in the capacity review
+  report. The stricter report validation requires that order.
+- Refreshed the `CHANGELOG.md` hash in `upstream-files.json`.
+
+## [3.5.0] (2026-10-29)
+
+### Added
+
+- Added optional `max_input_tokens` budgets per provider profile and a
+  `large_input_provider` key in `ci/model_providers.json`.
+- Routed review input above the `kimi-k2.7-code` budget to the
+  `ollama-large` profile with `minimax-m3.1-flash`.
+- Retried an HTTP 400 or 413 context rejection once on the large profile.
+
+### Fixed
+
+- Recorded a fixed `NEEDS-HUMAN` verdict for a diff above 3 MB or above every
+  model budget. Such pull requests previously received no verdict and stayed
+  blocked.
+- Recorded the same verdict for an HTTP 400 or 413 with no larger profile to
+  retry. Registries without `large_input_provider` also receive it.
+- Refreshed the `CHANGELOG.md` and `README.md` hashes in
+  `upstream-files.json`.
+
+## [3.4.8] (2026-10-28)
+
+### Added
+
+- Recorded the `abuzucom/infiniteprep` adoption in
+  `adopters/infiniteprep.md`.
+
+## [3.4.7] (2026-10-13)
+
+### Security
+
+- Pinned the PyYAML checker dependency to sha256 hashes. Every
+  `requirements-checkers.txt` install now runs in pip hash-checking mode.
+- Added a test that rejects checker requirements without an exact version
+  and sha256 hashes.
 
 ## [3.4.6] (2026-10-09)
 

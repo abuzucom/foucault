@@ -36,7 +36,8 @@ report with a machine-readable verdict. The workflow fails on `BLOCK` or
 14. The case builder creates one merge-base diff and one review envelope. The
     envelope carries the SHA-256 digest of the loaded policy.
 15. `ci/run_model_command.py` validates the adapter command without a shell.
-16. `ci/call_model.py` sends one request to the active provider.
+16. `ci/call_model.py` estimates the input size. It sends one request to the
+    smallest configured model whose input budget holds the review.
 17. The workflow validates the report and posts a fenced comment. The comment
     identifies its base commit, head commit, and workflow run. The workflow
     then uploads the verdict record artifact.
@@ -197,6 +198,41 @@ Switching providers requires a reviewed configuration change and a trusted
 secret mapping change. One provider runs per review. Provider matrices remain
 disabled by default.
 
+### Input budgets and large diffs
+
+Each profile accepts an optional `max_input_tokens` field. The value equals
+the model context window minus `max_output_tokens` and a safety margin. The
+top-level `large_input_provider` key names a second profile for large diffs.
+Both profiles use the same `MODEL_API_KEY`. The large profile therefore needs
+the same provider and secret as the active profile.
+
+The adapter estimates input tokens as one token per three characters. The
+estimate overcounts for code and JSON-escaped text. The adapter applies these
+rules:
+
+- An input within the active budget goes to the active profile.
+- A larger input within the large budget goes to the large profile.
+- A profile without `max_input_tokens` receives every input. Registries
+  written before the field existed keep their prior routing.
+- An HTTP 400 or 413 from the active profile retries once on the large
+  profile when the input fits there.
+- An HTTP 400 or 413 with no larger profile to retry exits with code 3.
+  A configuration error that returns HTTP 400 therefore also records
+  `NEEDS-HUMAN`. The job log keeps the HTTP status.
+- An input above every budget exits with code 3.
+
+The shipped budgets follow:
+
+| Profile | Model | Context | `max_input_tokens` |
+| --- | --- | --- | --- |
+| `ollama` | `kimi-k2.7-code` | 256K | 230000 |
+| `ollama-large` | `minimax-m3.1-flash` | 976K | 900000 |
+
+Adopters copy `ci/build_pr_case.py`, `ci/call_model.py`, and
+`ci/model_providers.json` again when they advance the pin. Older script
+copies exit with code 1 on an oversized diff. The workflow then fails as it
+did before this change.
+
 ## Request formats
 
 The adapter uses standard-library HTTP requests. The system policy and review
@@ -230,8 +266,9 @@ those fields.
 
 ## Performance controls
 
-The workflow creates one diff and one provider request per event. It does not
-call a provider once per file or once per finding. The adapter reads each file
+The workflow creates one diff and one provider request per event. A context
+rejection adds at most one request to the large profile. The workflow does
+not call a provider once per file or once per finding. The adapter reads each file
 once. It uses dictionary dispatch and set-based endpoint checks.
 
 Response validation compiles patterns once. It scans for the final verdict in
@@ -239,8 +276,13 @@ one pass. It parses one complete JSON companion line. Diff capture rejects
 output above 3 MB before envelope construction. The adapter retries a transient
 request at most once.
 
-The workflow does not silently sample an oversized review. It fails closed and
-requires human review when the configured capacity is exceeded.
+The workflow does not silently sample an oversized review. A diff above 3 MB
+or above every model budget skips the model call. The `Write capacity review
+report` step then writes a fixed report with `VERDICT: NEEDS-HUMAN`. The
+report quotes no pull request content. The normal validation, comment,
+verdict record, and check run steps follow. The pull request therefore
+receives a recorded verdict. The verdict record also stops repeat reviews of
+the same head.
 
 ## Failure behavior
 
@@ -255,6 +297,9 @@ The following conditions fail the job:
 - process narration or text after the final JSON companion;
 - `BLOCK` verdict;
 - `NEEDS-HUMAN` verdict when `fail_on_block` is true.
+
+A capacity `NEEDS-HUMAN` verdict also fails the job when `fail_on_block` is
+true. Merge after human review follows the branch protection process.
 
 The workflow never converts a provider failure into `APPROVE`.
 
