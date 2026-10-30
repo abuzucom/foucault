@@ -9,7 +9,7 @@ record assumes.
 `.github/workflows/security-review.yml` to the same commit,
 `fbb09487cdbbe85ca64b2e8c46605c3120b62c54` (release 3.5.0). The wiring
 landed in pull request abuzucom/infiniteprep#1 at release 3.4.7. Pull request
-abuzucom/infiniteprep#13 advances the pin to release 3.5.0.
+abuzucom/infiniteprep#14 advances the pin to release 3.5.0.
 
 ## Wiring
 
