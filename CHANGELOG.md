@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.6.0] (2026-10-31)
+
+### Added
+
+- Added narration and report-boundary checks to PR response validation.
+- Added an evaluation case for narration, prior-finding status, and finding evidence.
+
+### Changed
+
+- Required PR reports to contain conclusions and evidence without process narration.
+- Placed `VERDICT_JSON` after the `VERDICT` line in the capacity review
+  report. The stricter report validation requires that order.
+- Refreshed the `CHANGELOG.md` hash in `upstream-files.json`.
+
 ## [3.5.1] (2026-10-30)
 
 ### Changed

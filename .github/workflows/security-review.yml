@@ -343,8 +343,8 @@ jobs:
           review model. The automated review covered no files. A human
           reviewer must assess the complete diff before merge.
 
-          VERDICT_JSON: {"mode": "PR", "verdict": "NEEDS-HUMAN", "findings": []}
           VERDICT: NEEDS-HUMAN - diff exceeds automated review capacity
+          VERDICT_JSON: {"mode": "PR", "verdict": "NEEDS-HUMAN", "findings": []}
           REPORT
 
       - name: Validate report structure

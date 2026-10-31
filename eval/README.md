@@ -82,6 +82,7 @@ eval/cases/<slug>/
 | `expected_verdict` | Substring the response's `VERDICT:`/`RISK:` line must contain, e.g. `BLOCK`, `RISK: CRITICAL`, `RISK (partial)` |
 | `expected_classes` | AUDIT.md section 2.x references the case exercises |
 | `expect_json` | If `true`, the harness also requires a parseable `VERDICT_JSON:` block (AUDIT.md section 6) |
+| `report_contract` | Optional PR-only checks for narration, prior-finding status, and required cited evidence |
 | `notes` | Why this verdict is correct, for a human reviewing the case |
 | `fixture_notes` | Optional: provenance of any secret-shaped value in the fixture (see below) |
 
@@ -161,3 +162,10 @@ rule instead (`clean-*` cases), never copied from a real system.
 | `ambiguous-hook-provenance-pr` | PR | section 7, missing provenance escalates to NEEDS-HUMAN |
 | `policy-reinjection-hook-pr` | PR | section 8, repo-controlled policy reinjection is not a finding |
 | `rereview-new-defect-pr` | PR | section 3 re-review, a fix commit adds shell interpolation that a resolved prior finding must not clear |
+| `report-process-narration-pr` | PR | section 6, omit process narration while retaining a resolved prior finding, cited evidence, and a valid verdict |
+
+The report-contract case checks the production PR response validator. Run the
+case against the prompt before and after a prompt change with the same
+`--case` and `--model-call` arguments. The harness scores the verdict,
+`VERDICT_JSON`, prior-finding status, and required finding location. Structure
+checks do not call a model and cannot measure live narration rates.

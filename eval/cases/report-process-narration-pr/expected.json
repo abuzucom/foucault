@@ -1,0 +1,16 @@
+{
+  "mode": "PR",
+  "expected_verdict": "BLOCK",
+  "expected_classes": ["2.5"],
+  "expect_json": true,
+  "report_contract": {
+    "forbid_process_narration": true,
+    "require_prior_finding_status": true,
+    "required_finding": {
+      "class": "2.5",
+      "file": "app/reports/archive.py",
+      "line": 11
+    }
+  },
+  "notes": "The prior SQL finding is resolved. The new archive helper interpolates a filename into a shell command. The report must state the prior finding status and cite the new command injection without process narration."
+}

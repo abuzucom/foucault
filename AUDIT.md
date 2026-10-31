@@ -385,6 +385,11 @@ Required final human-readable line by mode:
 
 Immediately after that line, emit the machine-readable companion. CI gates on structure rather than prose:
 
+For PR mode, include only review conclusions, evidence, coverage, and prior-finding statuses. Complete
+steps 0-8 before drafting the report. Omit first-person process narration, self-directed questions or
+instructions, repeated reconsideration, and speculative work notes. State uncertainty as a review
+limitation and use NEEDS-HUMAN where section 1.8 applies. Put no text after the VERDICT_JSON line.
+
 ```
 VERDICT_JSON: {"mode": "PR|File|Piece|Wholesale", "verdict": "<the same verdict token as the line above>", "findings": [{"severity": "CRITICAL|HIGH|MEDIUM|LOW", "class": "2.x", "file": "path", "line": 123, "title": "short title"}]}
 ```
