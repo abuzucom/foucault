@@ -7,8 +7,9 @@ record assumes.
 
 `abuzucom/infiniteprep` pins `AUDIT.md` and the reusable
 `.github/workflows/security-review.yml` to the same commit,
-`c398b5a29890ba01dee5065a7dc97a91e3e2b08b` (release 3.4.7). The wiring
-landed in pull request abuzucom/infiniteprep#1.
+`fbb09487cdbbe85ca64b2e8c46605c3120b62c54` (release 3.5.0). The wiring
+landed in pull request abuzucom/infiniteprep#1 at release 3.4.7. Pull request
+abuzucom/infiniteprep#14 advances the pin to release 3.5.0.
 
 ## Wiring
 
@@ -23,6 +24,9 @@ landed in pull request abuzucom/infiniteprep#1.
   mapping, the fork handling, and the SHA-256 digest of each copied file.
 - The active provider profile is Ollama with `kimi-k2.7-code`, mapped from
   the `OLLAMA_API_KEY` repository secret.
+- Review input above the `kimi-k2.7-code` budget routes to the
+  `ollama-large` profile with `minimax-m3.1-flash`. Both profiles use the
+  same `OLLAMA_API_KEY` mapping.
 - `fail_on_block: true`. Fork pull requests run only after the
   `safe-to-review` label and `fork-review` environment approval. Unlabeled
   fork pull requests receive an explicit skip result and no provider secret.

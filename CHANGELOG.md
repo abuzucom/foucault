@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
-## [3.6.0] (2026-10-30)
+## [3.6.0] (2026-10-31)
 
 ### Added
 
@@ -18,6 +18,15 @@ loading `AUDIT.md` into a deployment.
 - Required PR reports to contain conclusions and evidence without process narration.
 - Placed `VERDICT_JSON` after the `VERDICT` line in the capacity review
   report. The stricter report validation requires that order.
+- Refreshed the `CHANGELOG.md` hash in `upstream-files.json`.
+
+## [3.5.1] (2026-10-30)
+
+### Changed
+
+- Updated `adopters/infiniteprep.md` for the infiniteprep upgrade to release
+  3.5.0 (`fbb09487cdbbe85ca64b2e8c46605c3120b62c54`). The record now names
+  the `ollama-large` profile.
 - Refreshed the `CHANGELOG.md` hash in `upstream-files.json`.
 
 ## [3.5.0] (2026-10-29)
