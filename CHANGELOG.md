@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.6.1] (2026-11-01)
+
+### Added
+
+- Added a pull request quality review that runs the `abuzucom/euler` review
+  beside the security review. The caller gates the review on a successful
+  `ci` run and a successful `Immutable Compliance` run for the same head
+  revision, and the fork path waits for the `safe-to-review` label and the
+  protected `fork-review` environment.
+- Added `docs/pr-quality-review.md` with the event flow, the trust
+  boundary, the pins, the prescan exclusions, and the known prescan
+  findings.
+- Added workflow assertions for the new caller to `tests/test_workflows.py`.
+
 ## [3.6.0] (2026-10-31)
 
 ### Added

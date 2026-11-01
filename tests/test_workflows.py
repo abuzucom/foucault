@@ -15,10 +15,17 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CI_PATH = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 REVIEW_PATH = REPO_ROOT / ".github" / "workflows" / "security-review.yml"
 CALLER_PATH = REPO_ROOT / ".github" / "workflows" / "security-review-pr.yml"
+QUALITY_CALLER_PATH = (
+    REPO_ROOT / ".github" / "workflows" / "quality-review-pr.yml"
+)
 SHA_PIN_RE = re.compile(r"@[0-9a-f]{40}\b")
 SCRIPT_REF_RE = re.compile(r"scripts/\w+\.py")
 USES_LINE_RE = re.compile(r"^\s+uses:")
 SECRETS_INHERIT_RE = re.compile(r"^\s+secrets:\s*inherit\b")
+EULER_USES_RE = re.compile(
+    r"uses: abuzucom/euler/\.github/workflows/quality-review\.yml@([0-9a-f]{40})"
+)
+QUALITY_REF_RE = re.compile(r"quality_ref: ([0-9a-f]{40})")
 
 PR_INTERPOLATION_PATTERNS = (
     "${{ github.event.pull_request.title }}",
@@ -30,7 +37,7 @@ class UsesPinningTest(unittest.TestCase):
     """Every action reference is pinned to a full commit SHA."""
 
     def test_every_uses_line_is_sha_pinned(self):
-        for path in (CI_PATH, REVIEW_PATH):
+        for path in (CI_PATH, REVIEW_PATH, QUALITY_CALLER_PATH):
             text = path.read_text(encoding="utf-8")
             uses_lines = [
                 line for line in text.splitlines() if USES_LINE_RE.match(line)
@@ -45,10 +52,10 @@ class SecretsTest(unittest.TestCase):
     """The reusable workflow must not receive every caller secret."""
 
     def test_no_secrets_inherit(self):
-        for path in (CI_PATH, REVIEW_PATH):
+        for path in (CI_PATH, REVIEW_PATH, QUALITY_CALLER_PATH):
             text = path.read_text(encoding="utf-8")
             for line in text.splitlines():
-                with self.subTest(file=path.name, line=line.strip()):
+                with self.subTest(file=path.name, line=line):
                     self.assertIsNone(SECRETS_INHERIT_RE.match(line))
 
 
@@ -325,6 +332,127 @@ class VerdictGateTest(unittest.TestCase):
         self.assertEqual(len(verdict_greps), 1)
         self.assertIn("'^VERDICT:'", verdict_greps[0])
         self.assertNotIn("RISK", verdict_greps[0])
+
+
+class QualityReviewCallerTest(unittest.TestCase):
+    """The euler quality review runs beside the security review.
+
+    The caller resolves the pull request from the workflow run head, gates
+    the review on the ci and Immutable Compliance runs, and calls the euler
+    reusable workflow at a pinned commit. The fork path mirrors the security
+    review path.
+    """
+
+    def setUp(self):
+        self.caller = QUALITY_CALLER_PATH.read_text(encoding="utf-8")
+
+    def test_caller_exists(self):
+        self.assertTrue(QUALITY_CALLER_PATH.is_file())
+
+    def test_trigger_covers_both_workflows(self):
+        """The review starts whichever workflow finishes last.
+
+        The ci workflow and the Immutable Compliance workflow run at the
+        same time and neither waits for the other. A caller subscribed to
+        one of them skips the review when the other finishes last.
+        """
+        self.assertIn("workflows: [ci, \"Immutable Compliance\"]", self.caller)
+
+    def test_euler_reference_is_pinned_to_a_full_sha(self):
+        matches = EULER_USES_RE.findall(self.caller)
+        self.assertTrue(matches)
+        for sha in matches:
+            self.assertRegex(sha, r"^[0-9a-f]{40}$")
+
+    def test_quality_ref_matches_the_uses_pin(self):
+        """The policy and the adapter must come from one commit.
+
+        The reusable workflow loads QUALITY.md and its own adapter from
+        quality_ref. A pin that names a different commit runs one revision
+        of the policy against another revision of the adapter.
+        """
+        uses_shas = set(EULER_USES_RE.findall(self.caller))
+        ref_shas = set(QUALITY_REF_RE.findall(self.caller))
+        self.assertTrue(uses_shas)
+        self.assertTrue(ref_shas)
+        self.assertEqual(uses_shas, ref_shas)
+
+    def test_review_requires_both_workflow_runs_to_succeed(self):
+        for gate in ("ci_passed", "compliance_passed"):
+            with self.subTest(gate=gate):
+                self.assertIn(
+                    f"needs.resolve.outputs.{gate} == 'true'", self.caller
+                )
+
+    def test_resolve_reads_both_workflow_runs(self):
+        self.assertIn("latestRun('ci', 'pull_request')", self.caller)
+        self.assertIn(
+            "latestRun(\n              'Immutable Compliance', "
+            "'pull_request_target')",
+            self.caller,
+        )
+
+    def test_fork_review_waits_for_the_safe_to_review_label(self):
+        self.assertIn("'safe-to-review'", self.caller)
+        self.assertIn(
+            "needs.resolve.outputs.fork_review_approved == 'true'", self.caller
+        )
+
+    def test_fork_job_passes_fork_review_and_no_repository_secret(self):
+        """The fork key comes from the protected environment.
+
+        A repository secret handed to the fork job would reach a fork pull
+        request. The environment supplies the key after approval.
+        """
+        fork_block = self.caller.split("  fork-review:", 1)[1].split(
+            "\n  fork-review-skipped:", 1
+        )[0]
+        self.assertIn("fork_review: true", fork_block)
+        self.assertNotIn("secrets:", fork_block)
+        self.assertNotIn("secrets.OLLAMA_API_KEY", fork_block)
+
+    def test_same_repository_job_maps_the_provider_secret(self):
+        review_block = self.caller.split("  review:", 1)[1].split(
+            "\n  fork-review:", 1
+        )[0]
+        self.assertIn(
+            "MODEL_API_KEY: ${{ secrets.OLLAMA_API_KEY }}", review_block
+        )
+
+    def test_review_job_grants_the_permissions_the_reusable_workflow_uses(self):
+        """The reusable workflow downloads an artifact and writes a comment.
+
+        A caller that withholds a permission makes the called workflow fail
+        at run time rather than at review time.
+        """
+        review_block = self.caller.split("  review:", 1)[1].split(
+            "\n  fork-review:", 1
+        )[0]
+        for permission in ("actions: read", "checks: write", "contents: read"):
+            with self.subTest(permission=permission):
+                self.assertIn(permission, review_block)
+        self.assertIn("pull-requests: write", review_block)
+
+    def test_prescan_excludes_the_intentional_defect_directories(self):
+        """The evaluation corpus and the test suite hold deliberate defects."""
+        self.assertIn('exclude_paths: "eval/cases/** tests/**"', self.caller)
+
+    def test_fork_skip_publishes_a_skipped_check_run(self):
+        skip_block = self.caller.split("  fork-review-skipped:", 1)[1]
+        self.assertIn("name: 'quality-review'", skip_block)
+        self.assertIn("conclusion: 'skipped'", skip_block)
+
+    def test_pull_request_prose_reaches_the_workflow_as_data_only(self):
+        """Title and body reach the reusable workflow as inputs.
+
+        A pull request author controls both values. The caller passes them
+        as workflow inputs, never through a shell expression.
+        """
+        for pattern in PR_INTERPOLATION_PATTERNS:
+            with self.subTest(pattern=pattern):
+                self.assertNotIn(pattern, self.caller)
+        self.assertIn("pr_title: ${{ needs.resolve.outputs.title }}", self.caller)
+        self.assertIn("pr_body: ${{ needs.resolve.outputs.body }}", self.caller)
 
 
 if __name__ == "__main__":
