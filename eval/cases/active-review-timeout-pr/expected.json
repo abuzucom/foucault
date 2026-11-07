@@ -1,0 +1,8 @@
+{
+  "mode": "PR",
+  "expected_verdict": "NEEDS-HUMAN",
+  "expected_classes": [],
+  "expect_json": true,
+  "expected_review_status": "NEEDS-HUMAN",
+  "notes": "Trusted hook context reports that the active review budget has elapsed."
+}

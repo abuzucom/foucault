@@ -109,6 +109,13 @@ def load_case(case_dir: Path) -> dict:
         raise CaseError(
             f"{case_dir.name}: mode '{expected['mode']}' not one of {sorted(VALID_MODES)}"
         )
+    if (
+        "expected_review_status" in expected
+        and expected["expected_review_status"] != "NEEDS-HUMAN"
+    ):
+        raise CaseError(
+            f"{case_dir.name}: expected_review_status must be NEEDS-HUMAN"
+        )
     if "report_contract" in expected:
         _validate_report_contract(case_dir.name, expected)
 
@@ -227,6 +234,12 @@ def verdict_matches(expected_verdict: str, response_text: str, *,
     return False, actual_line
 
 
+def review_status_matches(expected_status: str, response_text: str) -> bool:
+    """Return whether the report includes the expected review status line."""
+    prefix = f"REVIEW STATUS: {expected_status}"
+    return any(line.startswith(prefix) for line in response_text.splitlines())
+
+
 def json_companion_ok(response_text: str) -> tuple[bool, str]:
     for line in reversed(response_text.splitlines()):
         if not line.startswith(VERDICT_JSON_PREFIX):
@@ -327,6 +340,15 @@ def main() -> int:
         print(f"  {status}  {case['name']}: expected '{case['expected']['expected_verdict']}', got '{detail}'")
         if not ok:
             failures += 1
+
+        expected_status = case["expected"].get("expected_review_status")
+        if expected_status is not None:
+            checks += 1
+            status_ok = review_status_matches(expected_status, response)
+            status = "pass" if status_ok else "FAIL"
+            print(f"  {status}  {case['name']} (REVIEW STATUS)")
+            if not status_ok:
+                failures += 1
 
         if case["expected"].get("expect_json"):
             checks += 1

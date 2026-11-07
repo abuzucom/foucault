@@ -71,6 +71,7 @@ returns only the model's text content. The workflow validates both the final
 eval/cases/<slug>/
   diff.patch | input.<ext>   one or more input files (the review unit)
   context.md                 optional: PR description or ticket text
+  hook_context.md            optional trusted runtime context
   expected.json              required
 ```
 
@@ -82,6 +83,7 @@ eval/cases/<slug>/
 | `expected_verdict` | Substring the response's `VERDICT:`/`RISK:` line must contain, e.g. `BLOCK`, `RISK: CRITICAL`, `RISK (partial)` |
 | `expected_classes` | AUDIT.md section 2.x references the case exercises |
 | `expect_json` | If `true`, the harness also requires a parseable `VERDICT_JSON:` block (AUDIT.md section 6) |
+| `expected_review_status` | Optional `REVIEW STATUS` token checked for timeout cases |
 | `report_contract` | Optional PR-only checks for narration, prior-finding status, and required cited evidence |
 | `notes` | Why this verdict is correct, for a human reviewing the case |
 | `fixture_notes` | Optional: provenance of any secret-shaped value in the fixture (see below) |
