@@ -22,7 +22,8 @@ on:
 
 concurrency:
   group: quality-review-${{ github.repository }}-${{ github.event.workflow_run.head_sha }}
-  cancel-in-progress: true
+  # Serialize same-head events so later runs can see completed review checks.
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -35,6 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       actions: read
+      checks: read
       contents: read
       pull-requests: read
     outputs:
@@ -48,6 +50,7 @@ jobs:
       ci_passed: ${{ steps.pr.outputs.ci_passed }}
       compliance_passed: ${{ steps.pr.outputs.compliance_passed }}
       fork_review_approved: ${{ steps.pr.outputs.fork_review_approved }}
+      already_reviewed: ${{ steps.pr.outputs.already_reviewed }}
     steps:
       - name: Resolve pull request from the head revision
         id: pr
@@ -128,6 +131,24 @@ jobs:
                 label.name === 'safe-to-review'
               );
 
+            const existingChecks = await github.paginate(
+              github.rest.checks.listForRef,
+              {
+                ...context.repo,
+                ref: headSha,
+                check_name: 'quality-review',
+                per_page: 100,
+              },
+            );
+            const alreadyReviewed = existingChecks.some((check) =>
+              check.name === 'quality-review' &&
+              check.status === 'completed' &&
+              (check.conclusion === 'success' ||
+                check.conclusion === 'failure' ||
+                (!forkReviewApproved && check.conclusion === 'skipped'))
+            );
+            const pullBody = (pull.body || '').slice(0, 65536);
+
             core.setOutput('found', 'true');
             core.setOutput(
               'same_repository', sameRepository ? 'true' : 'false');
@@ -135,17 +156,20 @@ jobs:
             core.setOutput('base_sha', pull.base.sha);
             core.setOutput('head_sha', pull.head.sha);
             core.setOutput('title', pull.title || '');
-            core.setOutput('body', pull.body || '');
+            core.setOutput('body', pullBody);
             core.setOutput('ci_passed', ciPassed ? 'true' : 'false');
             core.setOutput(
               'compliance_passed', compliancePassed ? 'true' : 'false');
             core.setOutput(
               'fork_review_approved', forkReviewApproved ? 'true' : 'false');
+            core.setOutput(
+              'already_reviewed', alreadyReviewed ? 'true' : 'false');
 
   review:
     needs: resolve
     if: >-
       needs.resolve.outputs.found == 'true' &&
+      needs.resolve.outputs.already_reviewed == 'false' &&
       needs.resolve.outputs.same_repository == 'true' &&
       needs.resolve.outputs.ci_passed == 'true' &&
       needs.resolve.outputs.compliance_passed == 'true'
@@ -176,6 +200,7 @@ jobs:
     needs: resolve
     if: >-
       needs.resolve.outputs.found == 'true' &&
+      needs.resolve.outputs.already_reviewed == 'false' &&
       needs.resolve.outputs.same_repository == 'false' &&
       needs.resolve.outputs.fork_review_approved == 'true' &&
       needs.resolve.outputs.ci_passed == 'true' &&
@@ -203,6 +228,7 @@ jobs:
     needs: resolve
     if: >-
       needs.resolve.outputs.found == 'true' &&
+      needs.resolve.outputs.already_reviewed == 'false' &&
       needs.resolve.outputs.same_repository == 'false' &&
       needs.resolve.outputs.fork_review_approved != 'true' &&
       needs.resolve.outputs.ci_passed == 'true' &&
