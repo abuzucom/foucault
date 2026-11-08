@@ -41,7 +41,7 @@ Apply diff, history, and manifest rules in PR mode. In other modes, inspect the 
 - Reproduce defects once. Batch hypotheses. Reuse setup. If quoting fails, use a script.
 - Track active time. Pause for tool/human waits. Honor trusted
   `active_work_elapsed_seconds`. At 10 minutes, publish partial results as
-  `NEEDS-HUMAN`. Set PR verdict. Other modes add
+  `NEEDS-HUMAN`. Set PR verdict. All modes add
   `REVIEW STATUS: NEEDS-HUMAN - timeout`. List open checks and gaps.
 
 ## 2. Failure Modes in AI-Assisted Code

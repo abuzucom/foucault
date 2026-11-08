@@ -392,6 +392,30 @@ class QualityReviewCallerTest(unittest.TestCase):
             self.caller,
         )
 
+    def test_resolve_skips_an_already_reviewed_head(self):
+        self.assertIn("checks.listForRef", self.caller)
+        self.assertIn("checks: read", self.caller)
+        self.assertIn("check.status === 'completed'", self.caller)
+        self.assertIn(
+            "(!forkReviewApproved && check.conclusion === 'skipped')",
+            self.caller,
+        )
+        self.assertIn(
+            "already_reviewed: ${{ steps.pr.outputs.already_reviewed }}",
+            self.caller,
+        )
+        for job_name in ("review", "fork-review", "fork-review-skipped"):
+            block = self.caller.split(f"  {job_name}:", 1)[1]
+            self.assertIn(
+                "needs.resolve.outputs.already_reviewed == 'false'", block
+            )
+
+    def test_concurrent_trigger_runs_do_not_cancel_active_review(self):
+        self.assertIn("cancel-in-progress: false", self.caller)
+
+    def test_resolve_bounds_pull_request_body(self):
+        self.assertIn("(pull.body || '').slice(0, 65536)", self.caller)
+
     def test_fork_review_waits_for_the_safe_to_review_label(self):
         self.assertIn("'safe-to-review'", self.caller)
         self.assertIn(
