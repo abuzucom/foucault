@@ -142,7 +142,7 @@ jobs:
             );
             // Every workflow-authored check run carries the GitHub Actions
             // app, so a check run from a foreign app never marks this head
-            // as reviewed. Euler 0.6.6 publishes the review verdict in the
+            // as reviewed. Euler 0.7.1 publishes the review verdict in the
             // check title and ends without a verdict on a provider failure
             // or a timeout. A no-verdict ending leaves the head unmarked, so
             // the next same-head event retries the review. Keep the title
@@ -201,15 +201,15 @@ jobs:
       checks: write
       contents: read
       pull-requests: write
-    # Euler 0.6.6. Keep the uses: pin and quality_ref on the same commit.
-    uses: abuzucom/euler/.github/workflows/quality-review.yml@368c3260cfd1b4154b8418de920c6d68f28e4db7
+    # Euler 0.7.1. Keep the uses: pin and quality_ref on the same commit.
+    uses: abuzucom/euler/.github/workflows/quality-review.yml@eb97d1fe7bfbfec97997a30846f78a57a6f2f2e3
     with:
       pr_number: ${{ fromJSON(needs.resolve.outputs.number) }}
       base_sha: ${{ needs.resolve.outputs.base_sha }}
       head_sha: ${{ needs.resolve.outputs.head_sha }}
       pr_title: ${{ needs.resolve.outputs.title }}
       pr_body: ${{ needs.resolve.outputs.body }}
-      quality_ref: 368c3260cfd1b4154b8418de920c6d68f28e4db7
+      quality_ref: eb97d1fe7bfbfec97997a30846f78a57a6f2f2e3
       fail_on_block: true
       # The evaluation corpus and the test suite hold intentional defects.
       exclude_paths: "eval/cases/** tests/**"
@@ -230,14 +230,14 @@ jobs:
       checks: write
       contents: read
       pull-requests: write
-    uses: abuzucom/euler/.github/workflows/quality-review.yml@368c3260cfd1b4154b8418de920c6d68f28e4db7
+    uses: abuzucom/euler/.github/workflows/quality-review.yml@eb97d1fe7bfbfec97997a30846f78a57a6f2f2e3
     with:
       pr_number: ${{ fromJSON(needs.resolve.outputs.number) }}
       base_sha: ${{ needs.resolve.outputs.base_sha }}
       head_sha: ${{ needs.resolve.outputs.head_sha }}
       pr_title: ${{ needs.resolve.outputs.title }}
       pr_body: ${{ needs.resolve.outputs.body }}
-      quality_ref: 368c3260cfd1b4154b8418de920c6d68f28e4db7
+      quality_ref: eb97d1fe7bfbfec97997a30846f78a57a6f2f2e3
       fail_on_block: true
       fork_review: true
       exclude_paths: "eval/cases/** tests/**"
