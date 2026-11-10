@@ -59,8 +59,11 @@ REPORT_FORMAT_SUFFIX = (
     "narration.\n"
     "- State only declared context, findings with file and line, evidence, "
     "and conclusions.\n"
-    "- End the report with the final VERDICT line followed immediately by "
-    "the VERDICT_JSON line, with no text after it.\n"
+    "- End the report with exactly two consecutive lines at column zero. "
+    "The first line starts `VERDICT:`. The second line starts "
+    "`VERDICT_JSON:` and ends after the JSON object. Write no blank line, "
+    "no code fence, and no other character between the two lines, and no "
+    "line after the JSON object.\n"
 )
 
 

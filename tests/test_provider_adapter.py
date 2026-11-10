@@ -209,7 +209,8 @@ class ReportFormatContractTest(unittest.TestCase):
             captured["system_prompt"].endswith(suffix),
             captured["system_prompt"][-200:],
         )
-        for required in ("**Mode:**", "VERDICT line", "VERDICT_JSON"):
+        for required in ("**Mode:**", "two consecutive lines at column zero",
+                         "VERDICT_JSON", "no blank line", "no code fence"):
             with self.subTest(required=required):
                 self.assertIn(required, suffix)
 
