@@ -235,9 +235,22 @@ def verdict_matches(expected_verdict: str, response_text: str, *,
 
 
 def review_status_matches(expected_status: str, response_text: str) -> bool:
-    """Return whether the report includes the expected review status line."""
+    """Return whether the report's final review status line matches.
+
+    A report quotes earlier review status lines, and each carries an
+    untrusted origin at grading time. The last REVIEW STATUS line is the
+    report's own conclusion, so it decides the grade the way the final
+    verdict line does.
+    """
     prefix = f"REVIEW STATUS: {expected_status}"
-    return any(line.startswith(prefix) for line in response_text.splitlines())
+    lines = [
+        line
+        for line in response_text.splitlines()
+        if line.startswith("REVIEW STATUS:")
+    ]
+    if not lines:
+        return False
+    return lines[-1].startswith(prefix)
 
 
 def json_companion_ok(response_text: str) -> tuple[bool, str]:

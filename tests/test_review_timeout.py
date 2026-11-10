@@ -17,6 +17,21 @@ class ReviewTimeoutTest(unittest.TestCase):
         response = "VERDICT: NEEDS-HUMAN - incomplete review."
         self.assertFalse(run_eval.review_status_matches("NEEDS-HUMAN", response))
 
+    def test_quoted_status_line_before_own_line_does_not_match(self) -> None:
+        """The final status line decides the grade, not an earlier quote."""
+        quoted = "REVIEW STATUS: NEEDS-HUMAN - quoted earlier report."
+        own = "REVIEW STATUS: COMPLETED - a fresh review status."
+        self.assertFalse(
+            run_eval.review_status_matches("NEEDS-HUMAN", f"{quoted}\n{own}")
+        )
+
+    def test_last_status_line_carries_the_expected_token(self) -> None:
+        quoted = "REVIEW STATUS: COMPLETED - quoted earlier report."
+        own = "REVIEW STATUS: NEEDS-HUMAN - timeout reached."
+        self.assertTrue(
+            run_eval.review_status_matches("NEEDS-HUMAN", f"{quoted}\n{own}")
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
