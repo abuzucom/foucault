@@ -40,6 +40,23 @@ reviews read different policies and publish different check runs.
     `quality-review` check run on the head revision.
 13. The final verdict controls the check result.
 
+## Duplicate reviews
+
+More than one trigger event can name the same head revision. GitHub
+serializes the caller runs for one head. A later run therefore observes the
+completed review check run.
+
+The caller reads the completed `quality-review` check runs for the head
+revision. The reviewed rule accepts a check run that the GitHub Actions app
+published. Every workflow-authored check run carries that app. A completed
+check run that names a review verdict or a fork skip marks the head as
+reviewed. The caller then skips the review jobs.
+
+The check run title names the verdict at the pinned euler release. The
+title `Euler quality review: no verdict` stands for a provider failure or a
+timeout. Such an ending leaves the head unmarked. The next same-head event
+starts a fresh review. Each re-run starts one attempt.
+
 ## Trust boundary
 
 Fork pull requests receive no review until a maintainer applies
@@ -144,14 +161,21 @@ The following conditions skip the review and leave no check run:
 - a `ci` run that did not conclude `success` for the head revision;
 - an `Immutable Compliance` run that did not conclude `success` for the head
   revision;
+- a completed `quality-review` check run with a published verdict for the
+  head revision;
 - a fork pull request without the `safe-to-review` label.
 
 A fork pull request without the label receives a `quality-review` check run
 with a `skipped` conclusion and a summary that names the missing label.
 
+A review that ended without a verdict is an exception. The head stays
+unmarked. The next same-head event starts a fresh review. To recover from a
+provider outage, a maintainer re-runs the `ci` workflow or the
+`Immutable Compliance` workflow for the same head revision.
+
 The review never converts a provider failure into an approval. The euler
-reusable workflow publishes a blocking check run when the review ends without
-a verdict.
+reusable workflow publishes a blocking check run when the review ends
+without a verdict.
 
 ## Upgrade procedure
 

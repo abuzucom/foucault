@@ -395,11 +395,9 @@ class QualityReviewCallerTest(unittest.TestCase):
     def test_resolve_skips_an_already_reviewed_head(self):
         self.assertIn("checks.listForRef", self.caller)
         self.assertIn("checks: read", self.caller)
-        self.assertIn("check.status === 'completed'", self.caller)
-        self.assertIn(
-            "(!forkReviewApproved && check.conclusion === 'skipped')",
-            self.caller,
-        )
+        self.assertIn("if (check.status !== 'completed') {", self.caller)
+        self.assertIn("check.conclusion === 'skipped'", self.caller)
+        self.assertIn("return !forkReviewApproved;", self.caller)
         self.assertIn(
             "already_reviewed: ${{ steps.pr.outputs.already_reviewed }}",
             self.caller,
@@ -409,6 +407,33 @@ class QualityReviewCallerTest(unittest.TestCase):
             self.assertIn(
                 "needs.resolve.outputs.already_reviewed == 'false'", block
             )
+
+    def test_resolve_scopes_the_reviewed_marker_to_github_actions(self):
+        """A foreign check run cannot mark a head as reviewed.
+
+        The checks API cannot delete a check run, so the reviewed rule must
+        exclude check runs that a different app published. The GitHub Actions
+        app publishes every workflow-authored check run.
+        """
+        self.assertIn("check.app?.slug === 'github-actions'", self.caller)
+
+    def test_resolve_retries_a_review_without_a_verdict(self):
+        """A provider outage must not suppress the review for the head.
+
+        A verdict-bearing termination stays final while the head revision is
+        unchanged. A no-verdict ending leaves the head unmarked, so the next
+        same-head event starts a fresh review.
+        """
+        self.assertIn("check.conclusion === 'failure'", self.caller)
+        self.assertIn("title.startsWith('Euler quality review: ')", self.caller)
+        self.assertIn(
+            "title !== 'Euler quality review: no verdict'", self.caller
+        )
+        self.assertIn(
+            "check.conclusion === 'success' ||\n"
+            "                check.conclusion === 'neutral'",
+            self.caller,
+        )
 
     def test_concurrent_trigger_runs_do_not_cancel_active_review(self):
         self.assertIn("cancel-in-progress: false", self.caller)

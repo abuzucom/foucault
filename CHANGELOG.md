@@ -12,6 +12,9 @@ loading `AUDIT.md` into a deployment.
 
 - Required timeout status lines in every audit mode, including PR mode.
 - Prevented duplicate same-head quality reviews and bounded forwarded PR bodies.
+- Graded the final `REVIEW STATUS` line in the eval harness so a quoted lookalike cannot decide the grade.
+- Allowed a same-head re-review after a quality review ended without a verdict.
+- Scoped the reviewed-head marker to check runs published by the GitHub Actions app.
 
 ## [3.7.0] (2026-11-07)
 

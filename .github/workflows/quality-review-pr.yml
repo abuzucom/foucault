@@ -140,13 +140,33 @@ jobs:
                 per_page: 100,
               },
             );
-            const alreadyReviewed = existingChecks.some((check) =>
+            // Every workflow-authored check run carries the GitHub Actions
+            // app, so a check run from a foreign app never marks this head
+            // as reviewed. Euler 0.6.6 publishes the review verdict in the
+            // check title and ends without a verdict on a provider failure
+            // or a timeout. A no-verdict ending leaves the head unmarked, so
+            // the next same-head event retries the review. Keep the title
+            // strings in lockstep with the pinned euler release beside the
+            // pin.
+            const pipelineChecks = existingChecks.filter((check) =>
               check.name === 'quality-review' &&
-              check.status === 'completed' &&
-              (check.conclusion === 'success' ||
-                check.conclusion === 'failure' ||
-                (!forkReviewApproved && check.conclusion === 'skipped'))
+              check.app?.slug === 'github-actions'
             );
+            const alreadyReviewed = pipelineChecks.some((check) => {
+              if (check.status !== 'completed') {
+                return false;
+              }
+              if (check.conclusion === 'skipped') {
+                return !forkReviewApproved;
+              }
+              if (check.conclusion === 'failure') {
+                const title = check.output?.title || '';
+                return title.startsWith('Euler quality review: ') &&
+                  title !== 'Euler quality review: no verdict';
+              }
+              return check.conclusion === 'success' ||
+                check.conclusion === 'neutral';
+            });
             const pullBody = (pull.body || '').slice(0, 65536);
 
             core.setOutput('found', 'true');
