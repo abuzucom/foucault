@@ -132,6 +132,21 @@ class ReviewDedupeTest(unittest.TestCase):
             "needs.resolve-pr.outputs.already_reviewed != 'true'", self.caller
         )
 
+    def test_resolve_requires_an_open_pull_request(self):
+        """A merged head receives no review after the merge.
+
+        A re-run of the compliance workflow, an edited description, or a new
+        label still emits a workflow_run event for a merged pull request. The
+        resolver accepts only an open pull request, so a closed head fails
+        resolution and every review job skips.
+        """
+        self.assertIn('candidate.state === "open"', self.caller)
+        self.assertIn(
+            "expected one open pull request for review head, found",
+            self.caller,
+        )
+        self.assertIn('pullRequest.state !== "open"', self.caller)
+
 
 class CheckRunVisibilityTest(unittest.TestCase):
     """The review publishes a check run on the pull request head.
@@ -440,6 +455,15 @@ class QualityReviewCallerTest(unittest.TestCase):
 
     def test_resolve_bounds_pull_request_body(self):
         self.assertIn("(pull.body || '').slice(0, 65536)", self.caller)
+
+    def test_resolve_matches_open_pull_requests_only(self):
+        """A merged head resolves to no review unit.
+
+        The resolver reads open pull requests alone. A post-merge
+        workflow_run event therefore finds no matching pull request and
+        every review job skips.
+        """
+        self.assertIn("state: 'open'", self.caller)
 
     def test_fork_review_waits_for_the_safe_to_review_label(self):
         self.assertIn("'safe-to-review'", self.caller)

@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.7.2] (2026-11-09)
+
+### Fixed
+
+- Required an open pull request before the PR security review resolves its
+  head. Post-merge events such as a compliance re-run, an edited description,
+  or a label now fail resolution instead of starting a review on a merged
+  head.
+
 ## [3.7.1] (2026-11-08)
 
 ### Fixed
