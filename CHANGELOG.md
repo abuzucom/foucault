@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.7.6] (2026-11-09)
+
+### Changed
+
+- Advanced the `abuzucom/euler` quality review pin from release 0.6.6 at
+  commit `368c3260cfd1b4154b8418de920c6d68f28e4db7` to release 0.7.1 at
+  commit `eb97d1fe7bfbfec97997a30846f78a57a6f2f2e3`. Release 0.7.0 adds
+  investigation efficiency and timeout rules to `QUALITY.md`. Release 0.7.1
+  bumps the pinned actions inside the reusable workflow. The reusable
+  workflow keeps the input contract and the check name. The caller comments
+  record release 0.7.1.
+
 ## [3.7.5] (2026-11-09)
 
 ### Fixed
