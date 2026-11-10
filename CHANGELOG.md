@@ -15,6 +15,14 @@ loading `AUDIT.md` into a deployment.
   failures and failed on a blank line or fence between the verdict and JSON
   companion lines.
 
+## [3.7.4] (2026-11-09)
+
+### Changed
+
+- Updated `README.md` with the open-head resolution rule, the report format
+  contract, and the quality review caller.
+- Renumbered the event flow in `docs/pr-security-review.md`.
+
 ## [3.7.3] (2026-11-09)
 
 ### Fixed
