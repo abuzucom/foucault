@@ -42,6 +42,11 @@ jobs:
             }
 
             const baseRepository = `${context.repo.owner}/${context.repo.repo}`;
+            // The merge itself, a later description edit, a new label, or a
+            // re-run of the compliance workflow still emits a workflow_run
+            // event after a pull request merges. An open pull request is the
+            // only review subject, so a closed or merged head fails
+            // resolution and every review job skips.
             const pullRequests = await github.paginate(
               github.rest.repos.listPullRequestsAssociatedWithCommit,
               {
@@ -54,11 +59,12 @@ jobs:
             const candidates = pullRequests.filter((candidate) =>
               candidate.base?.repo?.full_name?.toLowerCase() ===
               baseRepository.toLowerCase() &&
-              candidate.head?.sha?.toLowerCase() === headSha.toLowerCase()
+              candidate.head?.sha?.toLowerCase() === headSha.toLowerCase() &&
+              candidate.state === "open"
             );
             if (candidates.length !== 1) {
               core.setFailed(
-                `expected one pull request for review head, found ${candidates.length}`,
+                `expected one open pull request for review head, found ${candidates.length}`,
               );
               return;
             }
@@ -83,6 +89,10 @@ jobs:
             const headRepository = pullRequest.head?.repo;
             if (!headRepository?.full_name || !headRepository.clone_url) {
               core.setFailed("pull request head repository metadata is unavailable");
+              return;
+            }
+            if (pullRequest.state !== "open") {
+              core.setFailed("the review pull request is not open");
               return;
             }
             if (

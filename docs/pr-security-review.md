@@ -11,7 +11,11 @@ report with a machine-readable verdict. The workflow fails on `BLOCK` or
 1. GitHub starts `immutable-conflict-check.yml` for pull request changes and
    when a maintainer applies a label.
 2. GitHub starts `security-review-pr.yml` after that workflow completes.
-3. The caller resolves the pull request from the workflow-run head.
+3. The caller resolves the pull request from the workflow-run head. The
+   resolver accepts one open pull request for the head revision. A merged or
+   closed head fails resolution and every review job skips. Post-merge events
+   such as a compliance re-run, an edited description, or a new label
+   therefore start no review.
    The caller skips the review only when two records exist for that revision.
    The first is a completed `security-review` check run with a verdict. The
    second is a `security-review-verdict-<head_sha>` artifact. A workflow run
@@ -61,7 +65,9 @@ workflow does not place title, body, filename, or diff content in shell syntax.
 The workflow-run event supplies the head revision. The trusted GitHub API
 resolves one matching pull request and supplies its number and revisions. The
 API request uses the base repository and validated head revision. The
-workflow passes the resolved metadata into the reusable workflow.
+workflow passes the resolved metadata into the reusable workflow. The
+resolution accepts one open pull request alone, so a merged head resolves no
+review unit for any post-merge event.
 
 Any workflow token with `checks: write` can write a check run name and
 summary. A workflow on a pull request branch holds such a token. The skip
@@ -295,6 +301,8 @@ The following conditions fail the job:
 - missing or malformed `VERDICT` line after one retry;
 - missing or mismatched `VERDICT_JSON` block;
 - process narration or text after the final JSON companion;
+- a workflow-run head revision with no associated open pull request. A merged
+  or closed head fails the resolve job, and every review job skips;
 - `BLOCK` verdict;
 - `NEEDS-HUMAN` verdict when `fail_on_block` is true.
 
