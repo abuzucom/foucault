@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.7.5] (2026-11-09)
+
+### Fixed
+
+- Stated the verdict adjacency explicitly in the fixed report format
+  contract. The first suffix-carrying review run removed the narration
+  failures and failed on a blank line or fence between the verdict and JSON
+  companion lines.
+
 ## [3.7.3] (2026-11-09)
 
 ### Fixed
