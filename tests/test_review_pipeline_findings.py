@@ -221,7 +221,8 @@ new AsyncFunction("github", "context", "core", scriptText)(github, context, core
 """
 
 
-def _resolve_fixture(artifacts: list, check_summary: str) -> dict:
+def _resolve_fixture(artifacts: list, check_summary: str,
+                    state: str = "open") -> dict:
     """Return one resolve-pr fixture with a forged or trusted review record."""
     artifact_name = f"security-review-verdict-{HEAD_SHA}"
     return {
@@ -232,6 +233,7 @@ def _resolve_fixture(artifacts: list, check_summary: str) -> dict:
         "runId": 100,
         "pullRequests": [{
             "number": 7,
+            "state": state,
             "base": {"sha": BASE_SHA, "repo": {"full_name": "abuzucom/foucault"}},
             "head": {
                 "sha": HEAD_SHA,
@@ -270,11 +272,26 @@ class ReviewSkipProofTest(unittest.TestCase):
         self.script = _named_step(
             steps, "Resolve pull request from workflow run head")["with"]["script"]
 
-    def _already_reviewed(self, artifacts: list) -> str:
+    def _resolve_report(self, state: str = "open") -> dict:
+        """Execute the resolver once and return its parsed report."""
         node = shutil.which("node")
         if node is None:
             self.skipTest("node is required to execute the github-script step")
+        fixture = _resolve_fixture([], self.FORGED_SUMMARY, state=state)
+        result = subprocess.run(
+            [node, "-e", NODE_HARNESS, self.script, json.dumps(fixture)],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=SCRIPT_TIMEOUT_SECONDS,
+        )
+        return json.loads(result.stdout)
+
+    def _already_reviewed(self, artifacts: list) -> str:
         fixture = _resolve_fixture(artifacts, self.FORGED_SUMMARY)
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("node is required to execute the github-script step")
         result = subprocess.run(
             [node, "-e", NODE_HARNESS, self.script, json.dumps(fixture)],
             capture_output=True,
@@ -314,6 +331,22 @@ class ReviewSkipProofTest(unittest.TestCase):
     def test_trusted_artifact_skips(self):
         artifacts = [{"expired": False, "workflow_run": {"id": 200}}]
         self.assertEqual(self._already_reviewed(artifacts), "true")
+
+    def test_closed_head_fails_resolution_without_review_outputs(self):
+        """A merged or closed head must resolve no review unit.
+
+        A post-merge event still emits the workflow_run event. The resolver
+        accepts only an open pull request, so it fails with no review
+        outputs and the caller's review jobs skip.
+        """
+        for state in ("closed",):
+            with self.subTest(state=state):
+                report = self._resolve_report(state)
+                self.assertEqual(report["outputs"], {})
+                self.assertEqual(
+                    report["failure"],
+                    "expected one open pull request for review head, found 0",
+                )
 
 
 class ReviewRecordUploadTest(unittest.TestCase):
