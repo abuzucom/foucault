@@ -245,6 +245,12 @@ The adapter uses standard-library HTTP requests. The system policy and review
 envelope become JSON values. The adapter never constructs JSON through string
 concatenation.
 
+The adapter appends a fixed report format contract to the system policy. The
+contract restates the impersonal report shape of the report sections: an
+impersonal opening, no process narration, and a final verdict line followed
+by the JSON companion with no text after it. The response validator still
+rejects a report that breaks these rules.
+
 Supported protocols:
 
 - Ollama uses `/api/chat` with Bearer authentication.
