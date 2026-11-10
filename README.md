@@ -69,18 +69,30 @@ allowing tables and exact-format output lines.
 the reusable workflow after the trusted immutable compliance workflow
 completes. The workflow reads the base revision, fetches the pull request head
 without checking it out, and builds one provenance-labeled review envelope.
-Fork reviews wait for the `safe-to-review` label. Applying the label runs the
-immutable compliance workflow before review resolution. Approved fork reviews
-wait for maintainer approval in the protected `fork-review` environment before
-the model job receives `MODEL_API_KEY`.
+The caller resolves one open pull request for the head revision, so a merged
+or closed head starts no review. Fork reviews wait for the `safe-to-review`
+label. Applying the label runs the immutable compliance workflow before
+review resolution. Approved fork reviews wait for maintainer approval in the
+protected `fork-review` environment before the model job receives
+`MODEL_API_KEY`.
 
 [`security-review.yml`](.github/workflows/security-review.yml) loads the
 immutable `AUDIT.md` revision, calls the configured provider adapter, posts a
-fenced report, and gates on the final `VERDICT` line. The adapter reads the
-provider profile from [`ci/model_providers.json`](ci/model_providers.json).
-The active profile uses Ollama with `kimi-k2.7-code`. Diffs above its input
-budget route to `minimax-m3.1-flash`. A diff above every budget receives a
-fixed `NEEDS-HUMAN` verdict instead of no verdict.
+fenced report, and gates on the final `VERDICT` line. The adapter appends a
+fixed report format contract to the system policy. The response validator
+rejects any report that breaks the contract. The adapter reads the provider
+profile from [`ci/model_providers.json`](ci/model_providers.json). The active
+profile uses Ollama with `kimi-k2.7-code`. Diffs above its input budget route
+to `minimax-m3.1-flash`. A diff above every budget receives a fixed
+`NEEDS-HUMAN` verdict instead of no verdict.
+
+[`quality-review-pr.yml`](.github/workflows/quality-review-pr.yml) runs the
+companion quality review from `abuzucom/euler` beside the security review.
+The caller gates the review on a successful `ci` run and a successful
+`Immutable Compliance` run for the same head revision, resolves the same open
+pull request, and publishes the `quality-review` check. The verdict is
+advisory to human review. See [`docs/pr-quality-review.md`](docs/pr-quality-review.md)
+for the event flow, pins, and failure behavior.
 
 The caller maps one provider-specific repository secret, such as
 `OLLAMA_API_KEY`, to the reusable workflow's `MODEL_API_KEY` secret. Provider
