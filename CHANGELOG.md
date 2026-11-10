@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.7.3] (2026-11-09)
+
+### Fixed
+
+- Appended a fixed report format contract to the review system prompt. Ten
+  consecutive review runs failed the response validator on first-person
+  report openers, and the contract now states the impersonal report shape in
+  the trusted system channel.
+
 ## [3.7.2] (2026-11-09)
 
 ### Fixed
@@ -14,10 +23,6 @@ loading `AUDIT.md` into a deployment.
   head. Post-merge events such as a compliance re-run, an edited description,
   or a label now fail resolution instead of starting a review on a merged
   head.
-- Appended a fixed report format contract to the review system prompt. Ten
-  consecutive review runs failed the response validator on first-person
-  report openers, and the contract now states the impersonal report shape in
-  the trusted system channel.
 
 ## [3.7.1] (2026-11-08)
 
