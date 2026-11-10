@@ -178,5 +178,41 @@ class FailureDiagnosticsTest(unittest.TestCase):
         self.assertNotIn("\x1b", sanitized)
 
 
+class ReportFormatContractTest(unittest.TestCase):
+    """Every review request carries the report format contract.
+
+    Ten review runs before the suffix failed the response validator on
+    first-person report openers. The suffix carries the binding contract in
+    the trusted system channel beside the policy.
+    """
+
+    def test_suffix_appended_to_every_system_prompt(self):
+        captured = {}
+
+        def _capture(profile, system_prompt, case_text, api_key):
+            captured["system_prompt"] = system_prompt
+            return "response text"
+
+        with patch.object(
+            call_model, "select_profile", return_value={"name": "ollama"}
+        ):
+            with patch.object(call_model, "_large_profile", return_value=None):
+                with patch.object(call_model, "_send", side_effect=_capture):
+                    with patch.dict("os.environ", {"MODEL_API_KEY": "secret"}):
+                        response = call_model.call_model(
+                            "policy text", "PR", "case text"
+                        )
+        self.assertEqual(response, "response text")
+        self.assertTrue(captured["system_prompt"].startswith("policy text"))
+        suffix = call_model.REPORT_FORMAT_SUFFIX
+        self.assertTrue(
+            captured["system_prompt"].endswith(suffix),
+            captured["system_prompt"][-200:],
+        )
+        for required in ("**Mode:**", "VERDICT line", "VERDICT_JSON"):
+            with self.subTest(required=required):
+                self.assertIn(required, suffix)
+
+
 if __name__ == "__main__":
     unittest.main()
