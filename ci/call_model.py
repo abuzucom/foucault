@@ -44,6 +44,24 @@ ENDPOINTS_BY_PROTOCOL = {
     "anthropic": "https://api.anthropic.com/v1",
     "google": "https://generativelanguage.googleapis.com/v1beta",
 }
+# Every review response must satisfy the report contract in sections 1, 6,
+# and 9 of the loaded policy. Ten consecutive review runs before this
+# constant failed the response validator on first-person openers, so the
+# policy wording alone did not hold. The suffix repeats the binding parts
+# verbatim in the trusted system channel.
+REPORT_FORMAT_SUFFIX = (
+    "\n\nReport format contract:\n"
+    "- Open the report body with the **Mode:** line. Never open the report "
+    "with a first-person sentence, a plan statement, or a review "
+    "announcement.\n"
+    "- Never write process narration anywhere in the report. First-person "
+    "openers, walkthrough steps, and self-directed questions are process "
+    "narration.\n"
+    "- State only declared context, findings with file and line, evidence, "
+    "and conclusions.\n"
+    "- End the report with the final VERDICT line followed immediately by "
+    "the VERDICT_JSON line, with no text after it.\n"
+)
 
 
 class ProviderError(RuntimeError):
@@ -364,6 +382,7 @@ def _send_large(profile: dict[str, Any], system_prompt: str, case_text: str,
 def call_model(system_prompt: str, mode: str, case_text: str) -> str:
     """Return the configured provider response for one evaluator request."""
     del mode
+    system_prompt = system_prompt + REPORT_FORMAT_SUFFIX
     if len(system_prompt) + len(case_text) > MAX_INPUT_CHARS:
         raise InputTooLargeError("review input exceeds the configured limit")
     api_key = os.environ.get("MODEL_API_KEY")
