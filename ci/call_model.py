@@ -382,13 +382,17 @@ def _send_large(profile: dict[str, Any], system_prompt: str, case_text: str,
 def call_model(system_prompt: str, mode: str, case_text: str) -> str:
     """Return the configured provider response for one evaluator request."""
     del mode
+    policy_prompt = system_prompt
     system_prompt = system_prompt + REPORT_FORMAT_SUFFIX
     if len(system_prompt) + len(case_text) > MAX_INPUT_CHARS:
         raise InputTooLargeError("review input exceeds the configured limit")
     api_key = os.environ.get("MODEL_API_KEY")
     if not api_key:
         raise ProviderError("MODEL_API_KEY is not configured")
-    estimated_tokens = estimate_tokens(system_prompt, case_text)
+    # Routing budgets measure the policy and the review case. The suffix is
+    # a fixed contract note, and every profile's safety margin already
+    # covers it.
+    estimated_tokens = estimate_tokens(policy_prompt, case_text)
     profile = select_profile(estimated_tokens)
     large = _large_profile()
     if large is not None and large["name"] == profile["name"]:
