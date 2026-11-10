@@ -20,33 +20,33 @@ report with a machine-readable verdict. The workflow fails on `BLOCK` or
    The first is a completed `security-review` check run with a verdict. The
    second is a `security-review-verdict-<head_sha>` artifact. A workflow run
    of the caller file on the default branch must have uploaded that artifact.
-5. The caller requires a successful `Immutable Compliance` run for the same
+4. The caller requires a successful `Immutable Compliance` run for the same
    head revision.
-6. The caller checks whether the head repository matches the base repository.
+5. The caller checks whether the head repository matches the base repository.
    The caller refreshes current labels from the GitHub API for fork PRs.
-7. A same-repository pull request calls `security-review.yml` on the existing
+6. A same-repository pull request calls `security-review.yml` on the existing
    path.
-8. A fork pull request calls `security-review.yml` only after
+7. A fork pull request calls `security-review.yml` only after
    `safe-to-review` appears on the pull request.
-9. The fork model job waits for approval in the `fork-review` environment.
+8. The fork model job waits for approval in the `fork-review` environment.
    The environment supplies `MODEL_API_KEY` after approval.
-10. Each reusable workflow path allows one active model review per pull request.
+9. Each reusable workflow path allows one active model review per pull request.
    A newer head cancels an obsolete in-progress review.
-11. An unlabeled fork pull request runs the skip job. The skip job receives no
+10. An unlabeled fork pull request runs the skip job. The skip job receives no
     provider secret.
-12. The reusable workflow checks out the base commit. It verifies that the
-   caller checkout holds every review script.
-13. The workflow fetches the head commits without checking them out.
-14. The case builder creates one merge-base diff and one review envelope. The
+11. The reusable workflow checks out the base commit. It verifies that the
+    caller checkout holds every review script.
+12. The workflow fetches the head commits without checking them out.
+13. The case builder creates one merge-base diff and one review envelope. The
     envelope carries the SHA-256 digest of the loaded policy.
-15. `ci/run_model_command.py` validates the adapter command without a shell.
-16. `ci/call_model.py` estimates the input size. It sends one request to the
+14. `ci/run_model_command.py` validates the adapter command without a shell.
+15. `ci/call_model.py` estimates the input size. It sends one request to the
     smallest configured model whose input budget holds the review.
-17. The workflow validates the report and posts a fenced comment. The comment
+16. The workflow validates the report and posts a fenced comment. The comment
     identifies its base commit, head commit, and workflow run. The workflow
     then uploads the verdict record artifact.
-18. The final verdict controls the check result.
-19. The workflow publishes a `security-review` check run on the pull request
+17. The final verdict controls the check result.
+18. The workflow publishes a `security-review` check run on the pull request
     head.
 
 ## Trust boundary
