@@ -213,8 +213,10 @@ Both profiles use the same `MODEL_API_KEY`. The large profile therefore needs
 the same provider and secret as the active profile.
 
 The adapter estimates input tokens as one token per three characters. The
-estimate overcounts for code and JSON-escaped text. The adapter applies these
-rules:
+estimate covers the policy and the review case. The fixed report format
+contract rides inside every profile's safety margin and is excluded from the
+estimate. The estimate overcounts for code and JSON-escaped text. The
+adapter applies these rules:
 
 - An input within the active budget goes to the active profile.
 - A larger input within the large budget goes to the large profile.

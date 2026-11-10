@@ -195,7 +195,7 @@ class ReportFormatContractTest(unittest.TestCase):
 
         with patch.object(
             call_model, "select_profile", return_value={"name": "ollama"}
-        ):
+        ) as route:
             with patch.object(call_model, "_large_profile", return_value=None):
                 with patch.object(call_model, "_send", side_effect=_capture):
                     with patch.dict("os.environ", {"MODEL_API_KEY": "secret"}):
@@ -213,6 +213,30 @@ class ReportFormatContractTest(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, suffix)
 
+    def test_suffix_excluded_from_the_routing_estimate(self):
+        """Routing budgets measure the policy and the case alone.
 
+        The suffix is a fixed addition inside every profile's safety
+        margin. Including it in the estimate displaces a boundary-sized
+        review to the larger profile.
+        """
+        captured = {}
+
+        def _capture_estimate(tokens):
+            captured["tokens"] = tokens
+            return {"name": "ollama"}
+
+        policy = "policy text"
+        case_text = "case text"
+        with patch.object(
+            call_model, "select_profile", side_effect=_capture_estimate
+        ):
+            with patch.object(call_model, "_large_profile", return_value=None):
+                with patch.object(call_model, "_send", return_value="text"):
+                    with patch.dict("os.environ", {"MODEL_API_KEY": "secret"}):
+                        call_model.call_model(policy, "PR", case_text)
+        self.assertEqual(
+            captured["tokens"], call_model.estimate_tokens(policy, case_text)
+        )
 if __name__ == "__main__":
     unittest.main()
