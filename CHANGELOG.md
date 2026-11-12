@@ -6,6 +6,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.7.7] (2026-11-12)
+
+### Fixed
+
+- Authenticated the pull request head fetch in `security-review.yml` for a
+  head in the base repository. The checkout persists no credential, and a
+  private caller failed the fetch with a missing-username error. The step
+  now passes the workflow token to that one `git fetch` through
+  `GIT_CONFIG_*` environment variables. Git config and the argument vector
+  never hold the token. A fork URL fetch receives no credential. The
+  workflow inputs stay unchanged.
+
+### Changed
+
+- Narrowed `test_head_fetch_does_not_forward_global_bearer_header` in
+  `tests/test_pr_review_integration.py`. The test now requires the
+  host-scoped header key and still forbids the unscoped key. Release 3.1.4
+  removed every bearer header from the head fetch. The active human approved
+  the test change.
+
+### Added
+
+- Added `tests/test_review_head_fetch_credential.py`. The tests execute the
+  fetch step script against a recording `git` stand-in.
+
 ## [3.7.6] (2026-11-09)
 
 ### Changed

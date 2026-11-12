@@ -93,8 +93,8 @@ class WorkflowWiringTest(unittest.TestCase):
 
     def test_head_fetch_does_not_forward_global_bearer_header(self):
         self.assertIn('"origin"', self.review)
-        self.assertNotIn("GIT_CONFIG_KEY_0", self.review)
-        self.assertNotIn("http.extraheader", self.review)
+        self.assertIn('"http.https://github.com/.extraheader"', self.review)
+        self.assertNotIn('"http.extraheader"', self.review)
 
     def test_weak_hash_fixture_keeps_the_intentional_finding(self):
         fixture = (
