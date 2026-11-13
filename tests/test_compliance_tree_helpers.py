@@ -92,6 +92,22 @@ class UnsafeExecutionDirectoryTest(unittest.TestCase):
                         repo, str(tools / "git"))
 
 
+    def test_working_directory_fallback_inside_repo_is_skipped(self):
+        """gettempdir() falling back to a candidate cwd is not accepted."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            repo = root / "candidate"
+            tools = root / "tools"
+            repo.mkdir()
+            tools.mkdir()
+            with mock.patch.object(
+                    check_compliance_tree.tempfile, "gettempdir",
+                    return_value=str(repo)):
+                chosen = check_compliance_tree._safe_execution_directory(
+                    repo, str(tools / "git"))
+        self.assertEqual(chosen, tools)
+
+
 class MissingAttributionCheckerTest(unittest.TestCase):
     """_scan_metadata fails closed with a named checker error."""
 

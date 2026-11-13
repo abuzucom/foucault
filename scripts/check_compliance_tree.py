@@ -167,7 +167,12 @@ def _safe_search_path(repo: Path) -> str:
 
 
 def _safe_execution_directory(repo: Path, executable: str) -> Path:
-    """Return an existing process directory outside the candidate repo."""
+    """Return an existing process directory outside the candidate repo.
+
+    Every candidate passes the same repository test. tempfile.gettempdir()
+    can fall back to the working directory. That directory may sit inside
+    the candidate repo and gets no exemption.
+    """
     for candidate in (Path(tempfile.gettempdir()), Path(executable).parent):
         try:
             resolved = candidate.resolve(strict=True)
