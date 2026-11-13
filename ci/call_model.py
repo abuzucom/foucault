@@ -26,8 +26,28 @@ MAX_RETRY_DELAY_SECONDS = 30
 # Code and JSON-escaped text average more than three characters per token
 # in common tokenizers. This estimate therefore overcounts.
 CHARS_PER_TOKEN_ESTIMATE = 3
-# Providers reject a request above the context window with one of these.
-CONTEXT_OVERFLOW_STATUS_CODES = {400, 413}
+# 413 always reports an oversized request. Providers also use 400 for
+# context overflow, but 400 covers every malformed request too. A 400 counts
+# as overflow only when its body names the context or token limit.
+PAYLOAD_TOO_LARGE_STATUS_CODE = 413
+BAD_REQUEST_STATUS_CODE = 400
+MAX_ERROR_BODY_BYTES = 4096
+# Phrases from the OpenAI, Anthropic, Google, and Ollama overflow errors.
+# Each phrase names a context or prompt limit. A bare field name such as
+# "token count" also appears in malformed-parameter errors and would send
+# the diff to the large model for an unrelated rejection.
+CONTEXT_OVERFLOW_MARKERS = (
+    "context length",
+    "context_length",
+    "context window",
+    "context size",
+    "available context size",
+    "maximum context",
+    "prompt is too long",
+    "prompt too long",
+    "too many tokens",
+    "input length exceeds",
+)
 # The workflow reads this exit code as "no configured model can hold the
 # review input" and records a NEEDS-HUMAN verdict instead of failing.
 CAPACITY_EXIT_CODE = 3
@@ -336,6 +356,23 @@ def _retry_delay_seconds(retry_after: str | None) -> float:
     )
 
 
+def _is_context_overflow(error: HTTPError) -> bool:
+    """Return whether a provider rejection reports context overflow.
+
+    The body is read once with a byte bound and never logged or echoed.
+    """
+    if error.code == PAYLOAD_TOO_LARGE_STATUS_CODE:
+        return True
+    if error.code != BAD_REQUEST_STATUS_CODE:
+        return False
+    try:
+        raw_body = error.read(MAX_ERROR_BODY_BYTES)
+    except (OSError, ValueError):
+        return False
+    body = raw_body.decode("utf-8", errors="replace").casefold()
+    return any(marker in body for marker in CONTEXT_OVERFLOW_MARKERS)
+
+
 def _request_once(request: Request) -> tuple[dict[str, Any], int | None, str | None]:
     try:
         with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
@@ -345,7 +382,7 @@ def _request_once(request: Request) -> tuple[dict[str, Any], int | None, str | N
             retry_after = error.headers.get("Retry-After") if error.headers else None
             return {}, error.code, retry_after
         message = f"provider request failed with HTTP {error.code}"
-        if error.code in CONTEXT_OVERFLOW_STATUS_CODES:
+        if _is_context_overflow(error):
             raise ContextOverflowError(message) from error
         raise ProviderError(message) from error
     except URLError as error:
