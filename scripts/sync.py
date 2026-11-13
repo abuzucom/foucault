@@ -413,20 +413,22 @@ def write_shared(root: Path) -> int:
 
 
 def _parse_modes(argv: list) -> argparse.Namespace:
-    """Return the mode flags, exiting 2 on any unknown argument.
+    """Return the mode flags, exiting 2 on any unknown or extra argument.
 
-    An unknown flag must not fall through to the default write mode.
+    An unknown flag must not fall through to the default write mode. A
+    second mode flag must not run one mode and ignore the other.
     """
     parser = argparse.ArgumentParser(
         description=__doc__.splitlines()[0], allow_abbrev=False)
-    parser.add_argument("--check", action="store_true",
-                        help="verify the AGENTS.md copies without writing")
-    parser.add_argument("--check-shared", action="store_true",
-                        help=f"verify shared gate files against {SHARED_MANIFEST}")
-    parser.add_argument("--write-shared", action="store_true",
-                        help=f"rewrite {SHARED_MANIFEST} from disk")
-    parser.add_argument("--print-adoptable", action="store_true",
-                        help="print adoptable policy without writing")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--check", action="store_true",
+                       help="verify the AGENTS.md copies without writing")
+    modes.add_argument("--check-shared", action="store_true",
+                       help=f"verify shared gate files against {SHARED_MANIFEST}")
+    modes.add_argument("--write-shared", action="store_true",
+                       help=f"rewrite {SHARED_MANIFEST} from disk")
+    modes.add_argument("--print-adoptable", action="store_true",
+                       help="print adoptable policy without writing")
     return parser.parse_args(argv)
 
 

@@ -10,9 +10,9 @@ loading `AUDIT.md` into a deployment.
 
 ### Changed
 
-- `scripts/sync.py` no longer accepts positional arguments or abbreviated
-  flags. Each call takes no argument or one of `--check`, `--check-shared`,
-  `--write-shared`, and `--print-adoptable`. Every caller in the Makefile,
+- `scripts/sync.py` no longer accepts positional arguments, abbreviated
+  flags, or more than one mode flag. Each call takes no argument or one of
+  `--check`, `--check-shared`, `--write-shared`, and `--print-adoptable`. Every caller in the Makefile,
   CI, pre-commit, and the policy documents uses one of those forms.
 - `claim_errors` in `scripts/delivery_evidence.py` returns a different error
   set for primary branches. A `main` or `master` checkout reports

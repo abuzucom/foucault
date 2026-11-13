@@ -88,6 +88,24 @@ class SyncArgumentTest(unittest.TestCase):
         copier.assert_not_called()
         printer.assert_not_called()
 
+    def test_positional_argument_exits_without_writing(self):
+        with mock.patch.object(sync, "sync_copies") as copier, \
+                contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                sync.main(["some/path"])
+        self.assertEqual(raised.exception.code, 2)
+        copier.assert_not_called()
+
+    def test_two_mode_flags_exit_without_running(self):
+        with mock.patch.object(sync, "sync_copies") as copier, \
+                mock.patch.object(sync, "write_shared") as writer, \
+                contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                sync.main(["--check", "--write-shared"])
+        self.assertEqual(raised.exception.code, 2)
+        copier.assert_not_called()
+        writer.assert_not_called()
+
     def test_check_flag_runs_check_only(self):
         with mock.patch.object(sync, "sync_copies", return_value=0) as copier:
             self.assertEqual(sync.main(["--check"]), 0)
@@ -172,9 +190,9 @@ class DeliveryPrimaryBranchTest(unittest.TestCase):
         for branch in ("main", "master"):
             with self.subTest(branch=branch):
                 evidence = self._evidence(branch)
-                self.assertIn(
-                    "current branch is a primary branch",
-                    delivery_evidence.claim_errors(evidence, "push"))
+                self.assertEqual(
+                    delivery_evidence.claim_errors(evidence, "push"),
+                    ["current branch is a primary branch"])
                 self.assertEqual(
                     delivery_evidence.verification_status(evidence, "push"),
                     "unverified")
