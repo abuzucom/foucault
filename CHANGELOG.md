@@ -14,7 +14,9 @@ loading `AUDIT.md` into a deployment.
   the response body names the context or token limit. `ci/call_model.py`
   reads at most 4096 body bytes and never logs them. Any other 400 now fails
   the review on the active model. A plain 400 no longer sends the private
-  diff to the large-input model. HTTP 413 still reroutes.
+  diff to the large-input model. HTTP 413 still reroutes. Each marker names
+  a context or prompt limit. A bare field name such as `token count` does not
+  match. The Ollama `context size` wording matches.
 - Accept impersonal report lines such as `i.e. the diff adds a test.`,
   `Trace: base to sink is parameterized.`, and `Inspect results: none.` in
   `scripts/check_pr_review_response.py`. A bare `i` or `we` opener followed

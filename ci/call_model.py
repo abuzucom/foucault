@@ -33,15 +33,19 @@ PAYLOAD_TOO_LARGE_STATUS_CODE = 413
 BAD_REQUEST_STATUS_CODE = 400
 MAX_ERROR_BODY_BYTES = 4096
 # Phrases from the OpenAI, Anthropic, Google, and Ollama overflow errors.
+# Each phrase names a context or prompt limit. A bare field name such as
+# "token count" also appears in malformed-parameter errors and would send
+# the diff to the large model for an unrelated rejection.
 CONTEXT_OVERFLOW_MARKERS = (
     "context length",
     "context_length",
     "context window",
+    "context size",
+    "available context size",
     "maximum context",
     "prompt is too long",
     "prompt too long",
     "too many tokens",
-    "token count",
     "input length exceeds",
 )
 # The workflow reads this exit code as "no configured model can hold the

@@ -155,6 +155,21 @@ class HttpRejectionRoutingTest(unittest.TestCase):
         """A 400 without a body carries no overflow evidence."""
         self._assert_plain_rejection(b"")
 
+    def test_http_400_naming_a_token_count_field_fails_without_reroute(
+            self) -> None:
+        """A malformed token count parameter is not a context limit."""
+        self._assert_plain_rejection(b'{"error": "invalid token count parameter"}')
+
+    def test_http_400_with_ollama_context_size_wording_reroutes(self) -> None:
+        """Ollama and llama.cpp report overflow as the context size."""
+        body = (b'{"error": "the request exceeds the available context size, '
+                b'try increasing it"}')
+        models: list[str] = []
+        text = _call_with_responses(
+            [_http_error(400, body), _FakeResponse("large reply")], models=models)
+        self.assertEqual(text, "large reply")
+        self.assertEqual(models, ["review-model", "large-model"])
+
     def test_http_400_overflow_marker_matches_case_insensitively(self) -> None:
         """Provider wording varies in letter case."""
         body = b'{"error": {"message": "Maximum Context length is 8192"}}'
