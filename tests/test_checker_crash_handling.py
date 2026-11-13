@@ -62,7 +62,9 @@ class StagedChangelogTest(unittest.TestCase):
                 code = check_changelog.check_staged(repository)
         self.assertEqual(code, 1)
         self.assertIn("[Unreleased] is not allowed", stderr.getvalue())
-        self.assertIn("version must advance", stderr.getvalue())
+        self.assertIn("no versioned release heading", stderr.getvalue())
+        # A missing version is not a version that failed to advance.
+        self.assertNotIn("version must advance", stderr.getvalue())
 
 
 class SyncArgumentTest(unittest.TestCase):
@@ -131,6 +133,23 @@ class SyncBundleSizeTest(unittest.TestCase):
                 sync.policy_bytes(root)
 
 
+class SyncAdoptableEncodingTest(unittest.TestCase):
+    """print_adoptable returns 1 for non-ASCII policy content."""
+
+    def test_non_ascii_supporting_file_returns_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / sync.SOURCE).write_text("canonical\n", encoding="ascii")
+            for relative_name in sync.SUPPORTING_POLICY_FILES:
+                path = root / relative_name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("detail\n", encoding="ascii")
+            (root / sync.SUPPORTING_POLICY_FILES[0]).write_bytes(b"caf\xc3\xa9\n")
+            with contextlib.redirect_stderr(io.StringIO()), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(sync.print_adoptable(root), 1)
+
+
 class DeliveryPrimaryBranchTest(unittest.TestCase):
     """A push claim from a primary branch never verifies."""
 
@@ -183,14 +202,15 @@ class AuditPolicySizeTest(unittest.TestCase):
             self._write(path, check_audit_policy.MAX_BYTES)
             findings = check_audit_policy.find_violations(path)
         self.assertIn(
-            f"policy exceeds {check_audit_policy.MAX_BYTES - 1} bytes", findings)
+            f"policy must be smaller than {check_audit_policy.MAX_BYTES} bytes",
+            findings)
 
     def test_policy_below_ceiling_has_no_size_finding(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "AUDIT.md"
             self._write(path, check_audit_policy.MAX_BYTES - 1)
             findings = check_audit_policy.find_violations(path)
-        self.assertFalse(any("policy exceeds" in item for item in findings))
+        self.assertFalse(any("must be smaller" in item for item in findings))
 
 
 class GateAdoptionDataTest(unittest.TestCase):

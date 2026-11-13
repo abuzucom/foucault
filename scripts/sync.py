@@ -119,7 +119,7 @@ def print_adoptable(root: Path) -> int:
         source, _ = _inspect_source(root)
         content = policy_bytes(source.parent).decode("ascii")
         print(adoptable_content(content), end="")
-    except (OSError, ValueError):
+    except (OSError, UnicodeDecodeError, ValueError):
         print("error: adoptable policy generation failed", file=sys.stderr)
         return 1
     return 0

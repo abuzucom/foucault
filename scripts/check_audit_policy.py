@@ -37,7 +37,7 @@ def find_violations(path: Path) -> list[str]:
     violations: list[str] = []
     # Product rule 4 keeps AUDIT.md strictly below MAX_BYTES.
     if len(raw) >= MAX_BYTES:
-        violations.append(f"policy exceeds {MAX_BYTES - 1} bytes")
+        violations.append(f"policy must be smaller than {MAX_BYTES} bytes")
     if b"\r" in raw:
         violations.append("policy must use LF line endings")
     try:
