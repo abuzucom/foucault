@@ -95,7 +95,11 @@ def _digest(text: str) -> str:
 
 def _terminate_reader(process: subprocess.Popen,
                       thread: threading.Thread) -> None:
-    """Stop the diff process and give its reader thread time to finish."""
+    """Stop the diff process and give its reader thread time to finish.
+
+    The caller opens the process with stdout=PIPE and confirms that
+    process.stdout is set before starting the reader thread.
+    """
     process.kill()
     process.stdout.close()
     process.wait()

@@ -126,6 +126,20 @@ class SharedVerdictJsonTest(unittest.TestCase):
                 check_pr_review_response.ResponseError, "invalid shape"):
             check_pr_review_response.validate_response(response)
 
+    def test_report_contract_rejects_non_object_findings(self):
+        """validate_response rejects a non-object finding before the scan."""
+        expected = {"report_contract": {"required_finding": {
+            "class": "2.1", "file": "app.py", "line": 1}}}
+        payload = {"mode": "PR", "verdict": "BLOCK", "findings": [1]}
+        response = "\n".join([
+            "Prior finding status: resolved.",
+            "VERDICT: BLOCK - synthetic",
+            "VERDICT_JSON: " + json.dumps(payload),
+        ])
+        passed, detail = run_eval.report_contract_result(expected, response)
+        self.assertFalse(passed)
+        self.assertIn("finding has an invalid shape", detail)
+
     def test_line_number_rule_is_shared(self):
         for value, valid in ((1, True), (0, False), (True, False), ("3", False)):
             with self.subTest(value=value):
