@@ -27,6 +27,7 @@ import importlib
 import json
 import re
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -35,7 +36,11 @@ if str(REPO_ROOT) not in sys.path:
 
 from scripts.check_pr_review_response import (
     PRIOR_FINDING_STATUS_PATTERN,
+    VERDICT_JSON_KEYS,
+    VERDICT_JSON_PREFIX,
     ResponseError,
+    parse_verdict_json_line,
+    valid_line_number,
     validate_response,
 )
 
@@ -48,8 +53,6 @@ CASE_INPUT_NAMES = ("diff.patch", "input.py", "input.txt", "input.js")
 VERDICT_LINE_RE = re.compile(
     r"^(VERDICT|RISK(?: \(partial\))?):\s*(.+)$", re.MULTILINE
 )
-VERDICT_JSON_PREFIX = "VERDICT_JSON:"
-
 # Section 6 gives each mode one verdict token. Grading a response against the
 # wrong one lets a report answering in another mode satisfy a check that mode
 # never addressed. File and Wholesale make no merge claim at all.
@@ -62,7 +65,7 @@ MODE_VERDICT_TOKENS = {
 
 
 class CaseError(Exception):
-    pass
+    """Report a malformed or missing eval case under eval/cases/."""
 
 
 def normalize_text(text: str) -> bytes:
@@ -97,10 +100,18 @@ def build_review_envelope(case: dict, system_prompt: str) -> dict:
 
 
 def load_case(case_dir: Path) -> dict:
+    """Return one validated case, raising CaseError for a malformed case."""
     expected_path = case_dir / "expected.json"
     if not expected_path.is_file():
         raise CaseError(f"{case_dir.name}: missing expected.json")
-    expected = json.loads(expected_path.read_text(encoding="utf-8"))
+    try:
+        expected = json.loads(expected_path.read_text(encoding="utf-8"))
+    except ValueError as error:
+        raise CaseError(
+            f"{case_dir.name}: expected.json is not valid UTF-8 JSON ({error})"
+        ) from error
+    if not isinstance(expected, dict):
+        raise CaseError(f"{case_dir.name}: expected.json is not an object")
 
     for key in ("mode", "expected_verdict", "expected_classes", "notes"):
         if key not in expected:
@@ -176,11 +187,7 @@ def _validate_report_contract(case_name: str, expected: dict) -> None:
         )
     if not isinstance(finding["file"], str) or not finding["file"]:
         raise CaseError(f"{case_name}: required_finding file is invalid")
-    if (
-        not isinstance(finding["line"], int)
-        or isinstance(finding["line"], bool)
-        or finding["line"] < 1
-    ):
+    if not valid_line_number(finding["line"]):
         raise CaseError(f"{case_name}: required_finding line is invalid")
 
 
@@ -196,7 +203,7 @@ def discover_cases(only: str | None = None) -> list[dict]:
 
 
 def verdict_matches(expected_verdict: str, response_text: str, *,
-                    mode: str = None) -> tuple[bool, str]:
+                    mode: str | None = None) -> tuple[bool, str]:
     """Grade the report's own verdict line against the expected token.
 
     mode is keyword-only and optional so an existing two-argument call keeps
@@ -229,9 +236,7 @@ def verdict_matches(expected_verdict: str, response_text: str, *,
         match.group(1),
         f"{match.group(1)}:",
     }
-    if expected_verdict in accepted:
-        return True, actual_line
-    return False, actual_line
+    return expected_verdict in accepted, actual_line
 
 
 def review_status_matches(expected_status: str, response_text: str) -> bool:
@@ -254,17 +259,19 @@ def review_status_matches(expected_status: str, response_text: str) -> bool:
 
 
 def json_companion_ok(response_text: str) -> tuple[bool, str]:
+    """Return whether the last VERDICT_JSON line has the section 6 shape.
+
+    Unlike the CI validator, this check accepts every review mode and does
+    not require the line to follow the verdict line.
+    """
     for line in reversed(response_text.splitlines()):
         if not line.startswith(VERDICT_JSON_PREFIX):
             continue
-        payload = line[len(VERDICT_JSON_PREFIX):].lstrip()
         try:
-            result = json.loads(payload)
-        except json.JSONDecodeError as exc:
-            return False, f"VERDICT_JSON block did not parse: {exc}"
-        if not isinstance(result, dict):
-            return False, "VERDICT_JSON block is not an object"
-        if set(result) != {"mode", "verdict", "findings"}:
+            result = parse_verdict_json_line(line)
+        except ResponseError as error:
+            return False, f"VERDICT_JSON block did not parse: {error}"
+        if set(result) != VERDICT_JSON_KEYS:
             return False, "VERDICT_JSON block has an invalid shape"
         if result["mode"] not in VALID_MODES or not isinstance(result["verdict"], str):
             return False, "VERDICT_JSON block has invalid values"
@@ -293,7 +300,6 @@ def report_contract_result(expected: dict, response_text: str) -> tuple[bool, st
         and finding.get("file") == required["file"]
         and finding.get("line") == required["line"]
         for finding in payload["findings"]
-        if isinstance(finding, dict)
     )
     if not has_finding:
         failures.append("required finding evidence is absent")
@@ -302,7 +308,8 @@ def report_contract_result(expected: dict, response_text: str) -> tuple[bool, st
     return True, "report contract passed"
 
 
-def resolve_model_call(spec: str):
+def resolve_model_call(spec: str) -> Callable[[str, str, str], str]:
+    """Return the callable a module:function --model-call spec names."""
     module_name, _, func_name = spec.partition(":")
     if not module_name or not func_name:
         raise CaseError("--model-call must be in the form module:function")
@@ -312,6 +319,7 @@ def resolve_model_call(spec: str):
 
 
 def main() -> int:
+    """Validate every case and grade model responses when configured."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--case", help="run only the named case")
     parser.add_argument(
