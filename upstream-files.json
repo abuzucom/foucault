@@ -112,7 +112,7 @@
     ".github/workflows/immutable-conflict-check.yml": "0a29e232bdd374d86f7302b753b3275a49fd82987d110454bc2f442f62ed1d3c",
     ".pre-commit-config.yaml": "9047cc425dfcf0642ae5f2834b5f39a5cdb6f4b1f5febc721c48fb384b1c7d8d",
     "AGENTS.md": "b4e1a017147c3cf8fd69d6a607249731e3fb4731380dc7372422ce5139ad717b",
-    "CHANGELOG.md": "ec4e11cd3dd0e6336f980155042d677d9099d3ce2d698f5206c18902a915fcff",
+    "CHANGELOG.md": "781ef48415f1e97d978f89979ada229d4fa2f8d7ecdef48099244570f677b51e",
     "CONTRIBUTING.md": "0ca0b20dc825eef3d1b3cc01f1663efb76a3884569485d323ca510eb9336c618",
     "Makefile": "73693be03526f9ab3dfe99555181cf7d4f9e638295c2d92a1e3bed64fbee34a9",
     "README.md": "17a420e25eda5479024d5ec4365d6e7f4492441dc175c7280823f45d4ddcd066",
