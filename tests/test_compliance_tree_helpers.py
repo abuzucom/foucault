@@ -78,6 +78,37 @@ class SafeExecutionDirectoryTest(unittest.TestCase):
         self.assertEqual(scanner, trusted)
 
 
+class UnsafeExecutionDirectoryTest(unittest.TestCase):
+    """Candidate-controlled directories never become the Git process cwd."""
+
+    def test_candidate_directories_are_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory).resolve() / "candidate"
+            tools = repo / "tools"
+            tools.mkdir(parents=True)
+            with mock.patch.object(tempfile, "tempdir", str(repo)):
+                with self.assertRaises(RuntimeError):
+                    check_compliance_tree._safe_execution_directory(
+                        repo, str(tools / "git"))
+
+
+class MissingAttributionCheckerTest(unittest.TestCase):
+    """_scan_metadata fails closed with a named checker error."""
+
+    def test_missing_attribution_checker_raises_runtime_error(self):
+        commits = []
+        banned = mock.Mock()
+        banned.find_violations.return_value = []
+        banned.load_commits.return_value = commits
+        checkers = {"check_banned_agents": banned,
+                    "check_branch_name": mock.Mock()}
+        values = {"--tree": "a" * 40, "--base": "b" * 40}
+        with self.assertRaisesRegex(
+                RuntimeError, "check_commit_attribution"):
+            check_compliance_tree._scan_metadata(
+                values, Path("."), checkers)
+
+
 class NamedConstantTest(unittest.TestCase):
     """The trusted workflow schema reads its shape from named constants."""
 

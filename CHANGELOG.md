@@ -12,17 +12,19 @@ loading `AUDIT.md` into a deployment.
 
 - Dropped relative `PATH` entries in the `scripts/check_compliance_tree.py`
   Git search path. A relative entry resolved against the working directory
-  and reached the Git lookup. The filter now strips quote characters before
-  the absolute-path test. Both rules match `scripts/trusted_git.py`.
+  and reached the Git lookup. The filter now strips double quotes before the
+  absolute-path test. Both rules match `scripts/trusted_git.py`.
+- Failed `check_compliance_tree.py` closed with a named error when the
+  attribution checker is absent. The scanner previously skipped attribution
+  checks for a checkers mapping without that module.
 - Chose the Git process directory in `check_compliance_tree.py` from
   `tempfile.gettempdir()` before the Git executable's directory. An unset
   `TEMP` previously became the current directory.
 
 ### Changed
 
-- Removed two impossible guards in `check_compliance_tree.py`. `Popen` with
-  `stdout=PIPE` always sets `stdout`. `_load_checkers` always loads
-  `check_commit_attribution`.
+- Removed an impossible guard in `check_compliance_tree.py`. `Popen` with
+  `stdout=PIPE` always sets `stdout`.
 - Named the BOM-less UTF-16 and UTF-32 detection ratios, the trusted
   workflow step count, the Python setup step index, and the checkout fetch
   depth in `check_compliance_tree.py`.

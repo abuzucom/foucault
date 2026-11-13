@@ -745,8 +745,11 @@ def _scan_metadata(
     head = values["--tree"]
     commits = banned.load_commits(base, head, repo)
     violations.extend(banned.find_violations(commits))
-    # _load_checkers raises unless every CHECKER_NAMES module loaded.
-    attribution = checkers["check_commit_attribution"]
+    # Attribution checks are mandatory. A checkers mapping without the module
+    # fails closed with a named error instead of skipping the check.
+    attribution = checkers.get("check_commit_attribution")
+    if attribution is None:
+        raise RuntimeError("trusted checker is missing: check_commit_attribution")
     violations.extend(attribution.trailer_violations(commits))
     repository_name = os.environ.get("PR_BASE_REPOSITORY", "")
     if repository_name:
