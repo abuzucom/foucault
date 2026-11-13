@@ -35,9 +35,10 @@ def find_violations(path: Path) -> list[str]:
         return [f"missing policy: {path}"]
     raw = path.read_bytes()
     violations: list[str] = []
-    if len(raw) > MAX_BYTES:
-        violations.append(f"policy exceeds {MAX_BYTES} bytes")
-    if b"\r\n" in raw or b"\r" in raw:
+    # Product rule 4 keeps AUDIT.md strictly below MAX_BYTES.
+    if len(raw) >= MAX_BYTES:
+        violations.append(f"policy exceeds {MAX_BYTES - 1} bytes")
+    if b"\r" in raw:
         violations.append("policy must use LF line endings")
     try:
         text = raw.decode("ascii")

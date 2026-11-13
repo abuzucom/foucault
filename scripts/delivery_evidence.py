@@ -6,6 +6,8 @@ import re
 COMMIT_RE = re.compile(r"\A[0-9a-fA-F]{40}(?:[0-9a-fA-F]{24})?\Z")
 COMMAND_RESULTS = frozenset(("succeeded", "failed", "not_run"))
 CLAIM_TYPES = frozenset(("push", "pull_request"))
+# AGENTS.md forbids work and pushes on either primary branch name.
+PRIMARY_BRANCHES = frozenset(("main", "master"))
 REQUIRED_FIELDS = (
     "checkout_path", "current_branch", "commit", "remote_ref",
     "command_result", "pr_number", "is_draft", "remote_ref_verified",
@@ -60,8 +62,9 @@ def claim_errors(evidence: dict, claim_type: str) -> list[str]:
         return errors
     if evidence["command_result"] != "succeeded":
         errors.append("command result is not succeeded")
-    if (evidence["current_branch"] == "main"
-            or evidence["current_branch"] != evidence["remote_ref"]):
+    if evidence["current_branch"] in PRIMARY_BRANCHES:
+        errors.append("current branch is a primary branch")
+    if evidence["current_branch"] != evidence["remote_ref"]:
         errors.append("current branch does not match remote ref")
     if not evidence["remote_ref_verified"]:
         errors.append("remote ref has not been read back")
