@@ -14,6 +14,9 @@ ACCOUNT_OUTPUT_LIMIT = 256
 COMMAND_OUTPUT_LIMIT = 1024 * 1024
 METADATA_OUTPUT_LIMIT = 65536
 GH_TIMEOUT_SECONDS = 5
+# Parent directories examined for a .git entry before repository context
+# discovery gives up.
+MAX_PARENT_SEARCH_DEPTH = 100
 PROXY_VARIABLES = ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY",
                    "http_proxy", "https_proxy", "all_proxy")
 MANAGED_PROXY_HOST = "127.0.0.1"
@@ -45,7 +48,7 @@ def find_literal_escape_sequences(arguments: list[str]) -> list[str]:
 def _find_git_entry(start: Path) -> Path:
     """Return the nearest .git entry or raise a bounded error."""
     current = start.resolve()
-    for _ in range(100):
+    for _ in range(MAX_PARENT_SEARCH_DEPTH):
         candidate = current / ".git"
         if candidate.is_dir() or candidate.is_file():
             return candidate
@@ -60,15 +63,7 @@ def _git_config_path(git_entry: Path) -> Path:
     """Return a local Git config path for a directory or worktree pointer."""
     if git_entry.is_dir():
         return git_entry / "config"
-    if git_entry.stat().st_size > METADATA_OUTPUT_LIMIT:
-        raise ValueError("repository context Git pointer exceeds the safety limit")
-    content = git_entry.read_text(encoding="utf-8", errors="strict")
-    marker, separator, value = content.strip().partition(":")
-    if marker.strip().lower() != "gitdir" or not separator or not value.strip():
-        raise ValueError("repository context has an invalid Git worktree pointer")
-    git_dir = (git_entry.parent / value.strip()).resolve()
-    if not git_dir.is_dir():
-        raise ValueError("repository context has a missing Git worktree directory")
+    git_dir = _git_dir(git_entry)
     common_file = git_dir / "commondir"
     if common_file.is_file():
         if common_file.stat().st_size > METADATA_OUTPUT_LIMIT:
