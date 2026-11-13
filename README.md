@@ -82,9 +82,8 @@ fenced report, and gates on the final `VERDICT` line. The adapter appends a
 fixed report format contract to the system policy. The response validator
 rejects any report that breaks the contract. The adapter reads the provider
 profile from [`ci/model_providers.json`](ci/model_providers.json). The active
-profile uses Ollama with `kimi-k2.7-code`. Diffs above its input budget route
-to `minimax-m3.1-flash`. A diff above every budget receives a fixed
-`NEEDS-HUMAN` verdict instead of no verdict.
+profile uses Ollama with `minimax-m3.1-flash`. A diff above its input budget
+receives a fixed `NEEDS-HUMAN` verdict instead of no verdict.
 
 [`quality-review-pr.yml`](.github/workflows/quality-review-pr.yml) runs the
 companion quality review from `abuzucom/euler` beside the security review.
