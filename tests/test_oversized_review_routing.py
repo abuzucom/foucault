@@ -120,6 +120,11 @@ class ContextOverflowFallbackTest(unittest.TestCase):
     def _http_error(self, code: int) -> HTTPError:
         return HTTPError(OLLAMA_ENDPOINT, code, "rejected", {}, None)
 
+    def _overflow_400(self) -> HTTPError:
+        """Return an HTTP 400 whose body names the context limit."""
+        body = b'{"error": "prompt is too long: 9000 tokens > 8000 maximum"}'
+        return HTTPError(OLLAMA_ENDPOINT, 400, "rejected", {}, io.BytesIO(body))
+
     def _call(self, side_effect, **config_options):
         requests = []
 
@@ -140,7 +145,7 @@ class ContextOverflowFallbackTest(unittest.TestCase):
 
     def test_http_400_retries_on_large_model(self):
         text, requests = self._call(
-            [self._http_error(400), _FakeResponse("large reply")])
+            [self._overflow_400(), _FakeResponse("large reply")])
         self.assertEqual(text, "large reply")
         self.assertEqual(
             [body["model"] for body in requests], ["review-model", "large-model"])
@@ -152,7 +157,7 @@ class ContextOverflowFallbackTest(unittest.TestCase):
 
     def test_http_400_without_large_model_is_capacity_error(self):
         with self.assertRaises(call_model.InputTooLargeError):
-            self._call([self._http_error(400)], large=False)
+            self._call([self._overflow_400()], large=False)
 
     def test_http_413_when_large_budget_is_exceeded_is_capacity_error(self):
         # The active profile has no budget and accepts any estimate. The
@@ -175,7 +180,7 @@ class ContextOverflowFallbackTest(unittest.TestCase):
 
     def test_large_model_rejection_after_fallback_is_capacity_error(self):
         with self.assertRaises(call_model.InputTooLargeError):
-            self._call([self._http_error(400), self._http_error(413)])
+            self._call([self._overflow_400(), self._http_error(413)])
 
     def test_large_model_rejection_on_direct_route_is_capacity_error(self):
         # The case is routed to the large profile by size alone. The
@@ -185,7 +190,7 @@ class ContextOverflowFallbackTest(unittest.TestCase):
         def fake_urlopen(request, timeout):
             del timeout
             requests.append(json.loads(request.data.decode("utf-8")))
-            raise self._http_error(400)
+            raise self._overflow_400()
 
         case_text = "c" * (3 * ACTIVE_BUDGET_TOKENS)
         with patch.dict("os.environ", {"MODEL_API_KEY": "synthetic"}), \

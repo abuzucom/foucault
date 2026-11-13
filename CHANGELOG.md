@@ -6,6 +6,35 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.7.8] (2026-11-13)
+
+### Fixed
+
+- Treat an HTTP 400 from the model provider as context overflow only when
+  the response body names the context or token limit. `ci/call_model.py`
+  reads at most 4096 body bytes and never logs them. Any other 400 now fails
+  the review on the active model. A plain 400 no longer sends the private
+  diff to the large-input model. HTTP 413 still reroutes.
+- Accept impersonal report lines such as `i.e. the diff adds a test.`,
+  `Trace: base to sink is parameterized.`, and `Inspect results: none.` in
+  `scripts/check_pr_review_response.py`. A bare `i` or `we` opener followed
+  by a period no longer counts as narration. The standalone `trace`,
+  `inspect`, and `need to` openers no longer count either. First-person
+  narration with those verbs stays rejected.
+
+### Changed
+
+- Send an overflow body with the HTTP 400 in four tests in
+  `tests/test_oversized_review_routing.py`. The assertions stay unchanged.
+  The active human approved the test change.
+
+### Added
+
+- Add `tests/test_review_adapter_portable.py`. The file imports only `ci/`
+  and `scripts/` modules. Adopting repositories copy it with the review
+  scripts. It covers profile selection, HTTP 400 and 413 routing, the
+  capacity exit code, the bounded diff read, and the narration boundary.
+
 ## [3.7.7] (2026-11-12)
 
 ### Fixed
