@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
-## [3.7.14] (2026-11-13)
+## [3.7.15] (2026-11-13)
 
 ### Changed
 
@@ -21,6 +21,20 @@ loading `AUDIT.md` into a deployment.
 - Added `tests/test_trusted_gh_worktree.py`. The tests cover linked worktree
   config resolution, matching pointer errors in both readers, and the
   discovery limit.
+
+## [3.7.12] (2026-11-13)
+
+### Fixed
+
+- Switched the active review profile to `ollama-large`. That profile runs
+  `minimax-m3.1-flash`. `kimi-k2.7-code` broke the report format contract on
+  every observed review. Its reports bolded the `VERDICT` line, fenced
+  `VERDICT_JSON`, and narrated the review process. The response validator
+  rejected each report, and the blind retry repeated the defect.
+
+### Added
+
+- A test that pins the shipped registry's active model.
 
 ## [3.7.11] (2026-11-13)
 
