@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
-## [3.7.8] (2026-11-13)
+## [3.7.13] (2026-11-13)
 
 ### Fixed
 
@@ -34,6 +34,48 @@ loading `AUDIT.md` into a deployment.
   and `scripts/` modules. Adopting repositories copy it with the review
   scripts. It covers profile selection, HTTP 400 and 413 routing, the
   capacity exit code, the bounded diff read, and the narration boundary.
+
+## [3.7.12] (2026-11-13)
+
+### Fixed
+
+- Switched the active review profile to `ollama-large`. That profile runs
+  `minimax-m3.1-flash`. `kimi-k2.7-code` broke the report format contract on
+  every observed review. Its reports bolded the `VERDICT` line, fenced
+  `VERDICT_JSON`, and narrated the review process. The response validator
+  rejected each report, and the blind retry repeated the defect.
+
+### Added
+
+- A test that pins the shipped registry's active model.
+
+## [3.7.11] (2026-11-13)
+
+### Fixed
+
+- Dropped relative `PATH` entries in the `scripts/check_compliance_tree.py`
+  Git search path. A relative entry resolved against the working directory
+  and reached the Git lookup. The filter now strips double quotes before the
+  absolute-path test. Both rules match `scripts/trusted_git.py`.
+- Failed `check_compliance_tree.py` closed with a named error when the
+  attribution checker is absent. The scanner previously skipped attribution
+  checks for a checkers mapping without that module.
+- Chose the Git process directory in `check_compliance_tree.py` from
+  `tempfile.gettempdir()` before the Git executable's directory. An unset
+  `TEMP` previously became the current directory.
+
+### Changed
+
+- Removed an impossible guard in `check_compliance_tree.py`. `Popen` with
+  `stdout=PIPE` always sets `stdout`.
+- Named the BOM-less UTF-16 and UTF-32 detection ratios, the trusted
+  workflow step count, the Python setup step index, and the checkout fetch
+  depth in `check_compliance_tree.py`.
+
+### Added
+
+- Added `tests/test_compliance_tree_helpers.py`. The tests hold the scanner's
+  PATH and directory helpers to the `trusted_git.py` results.
 
 ## [3.7.7] (2026-11-12)
 
