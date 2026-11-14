@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.8.0] (2026-11-14)
+
+### Added
+
+- Added `ci/build_retry_case.py`. A response that fails validation now
+  retries with the validator problems in `TRUSTED_HOOK_CONTEXT`. Only
+  allowlisted validator messages pass. Any other line becomes a fixed
+  placeholder. `REVIEW_TARGET` stays byte-identical. The retry previously resent the
+  same envelope, and the model repeated the same format failure.
+
+### Changed
+
+- The "Run model call" step in `security-review.yml` captures the validator
+  output and runs the retry on `retry_case.txt`. The step still makes at
+  most two model calls.
+
 ## [3.7.16] (2026-11-14)
 
 ### Changed

@@ -206,16 +206,27 @@ class ResponseRetryTest(unittest.TestCase):
 
     def test_model_step_retries_once_on_invalid_response(self):
         retry_pattern = (
-            r"if ! python3 scripts/check_pr_review_response\.py response\.txt "
-            r"> /dev/null; then\s+"
+            r"if ! validation_error=\"\$\(\s+"
+            r"python3 scripts/check_pr_review_response\.py response\.txt "
+            r"2>&1 > /dev/null\s+\)\"; then\s+"
             r"echo \"first response failed validation; one retry\" >&2\s+"
+            r"printf '%s\\n' \"\$validation_error\" > validation_error\.txt\s+"
+            r"python3 ci/build_retry_case\.py case_text\.txt "
+            r"validation_error\.txt retry_case\.txt\s+"
+            r"CASE_TEXT_FILE=retry_case\.txt "
             r"python3 ci/run_model_command\.py \"\$MODEL_CALL_COMMAND\" "
-            r"> response\.txt"
+            r"> response\.txt\s+fi"
         )
         self.assertRegex(self.model_step, retry_pattern)
         self.assertEqual(
             self.model_step.count("python3 ci/run_model_command.py"), 2
         )
+        self.assertEqual(self.model_step.count("retry_case.txt"), 2)
+
+    def test_first_model_call_reads_the_original_case(self):
+        self.assertIn("CASE_TEXT_FILE: case_text.txt", self.model_step)
+        first_call = self.model_step.split("python3 ci/run_model_command.py", 1)[0]
+        self.assertNotIn("retry_case.txt", first_call)
 
     def test_validation_failure_logs_only_structural_error(self):
         self.assertIn("validation_error=", self.validation_step)
