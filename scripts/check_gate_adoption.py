@@ -121,6 +121,36 @@ def check_required_files(root: Path) -> list[str]:
     for relative in required:
         if not (root / relative).is_file():
             findings.append(f"{relative} is absent from the adopted tree")
+    findings += _check_data_tokens(root)
+    return findings
+
+
+def _lists_tokens(path: Path) -> bool:
+    """Return whether a data file holds a non-comment, non-blank line."""
+    text = path.read_text(encoding="utf-8", errors="replace")
+    # The same line filter as check_branch_name.py decides what counts.
+    return any(
+        line.strip() and not line.lstrip().startswith("#")
+        for line in text.splitlines())
+
+
+def _check_data_tokens(root: Path) -> list[str]:
+    """Report present data files that list no tokens.
+
+    check_branch_name.py treats a comment-only list like an absent one.
+    """
+    findings: list[str] = []
+    for relative in REQUIRED_DATA:
+        path = root / relative
+        if not path.is_file():
+            continue
+        try:
+            has_tokens = _lists_tokens(path)
+        except OSError as error:
+            findings.append(f"{relative} is unreadable: {error.strerror}")
+            continue
+        if not has_tokens:
+            findings.append(f"{relative} lists no banned tokens")
     return findings
 
 

@@ -38,6 +38,8 @@ def find_violations(path: Path) -> list[str]:
     # Product rule 4 keeps AUDIT.md strictly below MAX_BYTES.
     if len(raw) >= MAX_BYTES:
         violations.append(f"policy must be smaller than {MAX_BYTES} bytes")
+    # Every CRLF pair contains a carriage return. This one test covers CRLF
+    # and lone CR line endings.
     if b"\r" in raw:
         violations.append("policy must use LF line endings")
     try:

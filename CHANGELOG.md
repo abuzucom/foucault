@@ -43,6 +43,10 @@ loading `AUDIT.md` into a deployment.
 - Required `scripts/branch_name_bans.txt` in `scripts/check_gate_adoption.py`.
   `check_branch_name.py` treats an absent list as empty. A partial copy
   therefore dropped the vulgarity check without a report.
+- Reported an empty or comment-only `scripts/branch_name_bans.txt` in
+  `scripts/check_gate_adoption.py`. The finding reads
+  `scripts/branch_name_bans.txt lists no banned tokens`. A list without
+  tokens disabled the vulgarity check like an absent list.
 
 ### Added
 

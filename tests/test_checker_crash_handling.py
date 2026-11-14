@@ -253,6 +253,28 @@ class GateAdoptionDataTest(unittest.TestCase):
         self.assertIn(
             "scripts/branch_name_bans.txt is absent", stderr.getvalue())
 
+    def test_ban_list_without_tokens_is_reported(self):
+        """A comment-only list disables the check like an absent one."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "adopter"
+            root.mkdir()
+            for relative in (
+                "hooks", "scripts", "tests", ".claude", ".codex", ".gemini",
+                ".agents",
+            ):
+                shutil.copytree(REPOSITORY_ROOT / relative, root / relative)
+            for relative in check_gate_adoption.REQUIRED_POLICY:
+                shutil.copy(REPOSITORY_ROOT / relative, root / relative)
+            (root / "scripts" / "branch_name_bans.txt").write_text(
+                "# no tokens\n\n", encoding="utf-8")
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                code = check_gate_adoption.main(["--root", str(root)])
+        self.assertEqual(code, 1)
+        self.assertIn(
+            "scripts/branch_name_bans.txt lists no banned tokens",
+            stderr.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()
