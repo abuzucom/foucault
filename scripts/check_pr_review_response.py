@@ -17,9 +17,12 @@ CLASS_PATTERN = re.compile(r"^2\.\d+$")
 VALID_SEVERITIES = {"CRITICAL", "HIGH", "MEDIUM", "LOW"}
 FINDING_KEYS = {"severity", "class", "file", "line", "title"}
 RESPONSE_LIMIT = 1_000_000
+# A bare "i" or "we" opener is narration unless a period follows, as in
+# "i.e.". Section labels such as "Trace:" or "Inspect results:" are
+# impersonal. Narration with those verbs starts with "I", "we", or "let me".
 PROCESS_NARRATION_PATTERNS = (
     re.compile(
-        r"^\s*(?:(?:[-*+])\s+|\d+[.)]\s+)?(?:i|we)\b",
+        r"^\s*(?:(?:[-*+])\s+|\d+[.)]\s+)?(?:i|we)\b(?!\.)",
         re.IGNORECASE,
     ),
     re.compile(
@@ -27,7 +30,7 @@ PROCESS_NARRATION_PATTERNS = (
         r"should i\b|could i\b|would i\b|"
         r"do i\b|did i\b|am i\b|have i\b|wait(?:,|\s|$)|"
         r"actually(?:,|\s|$)|on second thought\b|reconsider(?:ing)?\b|"
-        r"need to\b|inspect\b|trace\b|check whether\b|check if\b|"
+        r"check whether\b|check if\b|"
         r"now i\b|first i\b|what if\b|maybe (?:i|we)\b|"
         r"perhaps (?:i|we)\b|should (?:this|that|it|the)\b|"
         r"could (?:this|that|it)\b|would (?:this|that|it)\b|"
