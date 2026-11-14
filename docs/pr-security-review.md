@@ -95,6 +95,15 @@ The review envelope keeps `TRUSTED_HOOK_CONTEXT` separate from
 location in the review target. Missing or ambiguous provenance requires
 `NEEDS-HUMAN`.
 
+A response that fails validation earns one retry. `ci/build_retry_case.py`
+copies the first envelope and adds the validator problems to
+`TRUSTED_HOOK_CONTEXT`. Only messages from a fixed allowlist of validator
+problems pass. Any other line becomes `validator problem unavailable`.
+Model-controlled text cannot reach trusted context through the retry. A test
+fails when the validator gains a message missing from the allowlist.
+`REVIEW_TARGET` stays byte-identical. The model sees what the first report
+broke and corrects it on the retry.
+
 The provider receives the system policy and the review envelope. The provider
 does not receive the GitHub token, the provider configuration file, or other
 repository secrets.
