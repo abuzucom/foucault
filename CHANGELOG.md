@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.7.16] (2026-11-14)
+
+### Changed
+
+- `_git_config_path` in `scripts/trusted_gh.py` reads a worktree pointer
+  through `_git_dir`. The two functions previously carried separate copies
+  of the pointer parser. Error messages and resolved paths stay unchanged.
+- Named the repository discovery limit `MAX_PARENT_SEARCH_DEPTH` in
+  `trusted_gh.py`. The limit stays 100 parent directories.
+
+### Added
+
+- Added `tests/test_trusted_gh_worktree.py`. The tests cover linked worktree
+  config resolution, matching pointer errors in both readers, and the
+  discovery limit.
+
 ## [3.7.13] (2026-11-13)
 
 ### Fixed
