@@ -344,9 +344,16 @@ jobs:
           if [ "$status" -ne 0 ]; then
             exit "$status"
           fi
-          if ! python3 scripts/check_pr_review_response.py response.txt > /dev/null; then
+          # The retry envelope carries the validator problems in trusted
+          # context. The validator emits fixed messages, and the builder keeps
+          # bounded printable ASCII. REVIEW_TARGET stays byte-identical.
+          if ! validation_error="$(
+            python3 scripts/check_pr_review_response.py response.txt 2>&1 > /dev/null
+          )"; then
             echo "first response failed validation; one retry" >&2
-            python3 ci/run_model_command.py "$MODEL_CALL_COMMAND" > response.txt
+            printf '%s\n' "$validation_error" > validation_error.txt
+            python3 ci/build_retry_case.py case_text.txt validation_error.txt retry_case.txt
+            CASE_TEXT_FILE=retry_case.txt python3 ci/run_model_command.py "$MODEL_CALL_COMMAND" > response.txt
           fi
 
       # Fixed text only. The report quotes nothing from the pull request. An
