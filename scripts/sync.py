@@ -12,6 +12,7 @@ against a manifest committed in each of them instead. A file that differs
 is either a fix one repository has and the other does not, or drift that
 belongs in the drift record. Both need somebody to look.
 """
+import argparse
 import hashlib
 import json
 import os
@@ -92,7 +93,7 @@ def policy_bytes(root: Path) -> bytes:
         parts.append(content + (b"\n" if not content.endswith(b"\n") else b""))
     assembled = raw + (b"\n" if not raw.endswith(b"\n") else b"") + b"".join(parts)
     if len(assembled) > MAX_POLICY_BYTES:
-        raise ValueError("AGENTS.md exceeds the policy size limit")
+        raise ValueError("assembled policy exceeds the policy size limit")
     return assembled
 
 
@@ -335,11 +336,15 @@ def read_manifest(root: Path) -> dict:
     if not manifest.is_file():
         return {}
     try:
-        return json.loads(manifest.read_text(encoding="utf-8"))
+        document = json.loads(manifest.read_text(encoding="utf-8"))
     except ValueError as error:
         print(f"error: {SHARED_MANIFEST} is not valid JSON ({error})",
               file=sys.stderr)
         return {}
+    if not isinstance(document, dict):
+        print(f"error: {SHARED_MANIFEST} is not a JSON object", file=sys.stderr)
+        return {}
+    return document
 
 
 def shared_problems(root: Path, recorded: dict) -> list:
@@ -407,16 +412,37 @@ def write_shared(root: Path) -> int:
     return 0
 
 
+def _parse_modes(argv: list) -> argparse.Namespace:
+    """Return the mode flags, exiting 2 on any unknown or extra argument.
+
+    An unknown flag must not fall through to the default write mode. A
+    second mode flag must not run one mode and ignore the other.
+    """
+    parser = argparse.ArgumentParser(
+        description=__doc__.splitlines()[0], allow_abbrev=False)
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--check", action="store_true",
+                       help="verify the AGENTS.md copies without writing")
+    modes.add_argument("--check-shared", action="store_true",
+                       help=f"verify shared gate files against {SHARED_MANIFEST}")
+    modes.add_argument("--write-shared", action="store_true",
+                       help=f"rewrite {SHARED_MANIFEST} from disk")
+    modes.add_argument("--print-adoptable", action="store_true",
+                       help="print adoptable policy without writing")
+    return parser.parse_args(argv)
+
+
 def main(argv: list) -> int:
     """Dispatch on the mode flag and return a process exit code."""
+    modes = _parse_modes(argv)
     root = Path(__file__).resolve().parent.parent
-    if "--print-adoptable" in argv:
+    if modes.print_adoptable:
         return print_adoptable(root)
-    if "--check-shared" in argv:
+    if modes.check_shared:
         return check_shared(root)
-    if "--write-shared" in argv:
+    if modes.write_shared:
         return write_shared(root)
-    return sync_copies(check_only="--check" in argv)
+    return sync_copies(check_only=modes.check)
 
 
 if __name__ == "__main__":

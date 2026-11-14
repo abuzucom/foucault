@@ -50,6 +50,9 @@ REQUIRED_CHECKERS = (
     "scripts/trusted_git.py",
 )
 REQUIRED_POLICY = ("AGENTS.md", SHARED_MANIFEST)
+# check_branch_name.py treats an absent ban list as empty. A partial copy
+# therefore drops the branch-name vulgarity check without a report.
+REQUIRED_DATA = ("scripts/branch_name_bans.txt",)
 CONFIG_PATHS = (
     ".claude/settings.json",
     "hooks/claude-code-settings.example.json",
@@ -114,10 +117,40 @@ def check_required_files(root: Path) -> list[str]:
     shared, findings = _shared_paths(root)
     required = list(shared) + list(CLIENT_HOOKS)
     required += list(REQUIRED_CHECKERS) + list(REQUIRED_POLICY)
-    required += list(CLIENT_CONFIG_PATHS)
+    required += list(REQUIRED_DATA) + list(CLIENT_CONFIG_PATHS)
     for relative in required:
         if not (root / relative).is_file():
             findings.append(f"{relative} is absent from the adopted tree")
+    findings += _check_data_tokens(root)
+    return findings
+
+
+def _lists_tokens(path: Path) -> bool:
+    """Return whether a data file holds a non-comment, non-blank line."""
+    text = path.read_text(encoding="utf-8", errors="replace")
+    # The same line filter as check_branch_name.py decides what counts.
+    return any(
+        line.strip() and not line.lstrip().startswith("#")
+        for line in text.splitlines())
+
+
+def _check_data_tokens(root: Path) -> list[str]:
+    """Report present data files that list no tokens.
+
+    check_branch_name.py treats a comment-only list like an absent one.
+    """
+    findings: list[str] = []
+    for relative in REQUIRED_DATA:
+        path = root / relative
+        if not path.is_file():
+            continue
+        try:
+            has_tokens = _lists_tokens(path)
+        except OSError as error:
+            findings.append(f"{relative} is unreadable: {error.strerror}")
+            continue
+        if not has_tokens:
+            findings.append(f"{relative} lists no banned tokens")
     return findings
 
 
