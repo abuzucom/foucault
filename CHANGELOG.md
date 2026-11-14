@@ -11,9 +11,9 @@ loading `AUDIT.md` into a deployment.
 ### Added
 
 - Added `ci/build_retry_case.py`. A response that fails validation now
-  retries with the validator problems in `TRUSTED_HOOK_CONTEXT`. The
-  builder keeps at most 2,000 characters of printable ASCII.
-  `REVIEW_TARGET` stays byte-identical. The retry previously resent the
+  retries with the validator problems in `TRUSTED_HOOK_CONTEXT`. Only
+  allowlisted validator messages pass. Any other line becomes a fixed
+  placeholder. `REVIEW_TARGET` stays byte-identical. The retry previously resent the
   same envelope, and the model repeated the same format failure.
 
 ### Changed

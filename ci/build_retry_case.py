@@ -4,10 +4,10 @@
 Usage: build_retry_case.py CASE_FILE ERROR_FILE OUTPUT_FILE
 
 The retry envelope copies the first envelope and adds the validator problems
-to TRUSTED_HOOK_CONTEXT. REVIEW_TARGET stays byte-identical. The validator
-emits fixed messages with line numbers. The builder still bounds the text
-and keeps printable ASCII only. A pipeline file then cannot carry terminal
-escapes or unbounded text into the trusted channel.
+to TRUSTED_HOOK_CONTEXT. REVIEW_TARGET stays byte-identical. Only validator
+lines from a fixed allowlist enter the trusted channel. Any other line becomes
+a fixed placeholder. Model-controlled text in the error file therefore cannot
+reach trusted context, whatever the validator prints.
 """
 
 from __future__ import annotations
@@ -23,12 +23,37 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import build_pr_case  # resolved through the path set above
 
-MAX_PROBLEM_CHARS = 2_000
 # Reading a bounded prefix keeps a runaway error file out of memory.
-MAX_ERROR_FILE_CHARS = MAX_PROBLEM_CHARS * 4
+MAX_ERROR_FILE_CHARS = 8_000
 EXPECTED_ARGUMENTS = 3
-NON_PRINTABLE_ASCII = re.compile(r"[^\x20-\x7e]")
-REPEATED_SPACES = re.compile(r" {2,}")
+VALIDATOR_PREFIX = "invalid PR review response: "
+# Every fixed ResponseError message in scripts/check_pr_review_response.py.
+# tests/test_build_retry_case.py fails when the validator gains a message
+# missing here.
+KNOWN_PROBLEMS = frozenset({
+    "response is empty",
+    "final VERDICT line is malformed",
+    "no VERDICT line at column zero",
+    "VERDICT_JSON is not valid JSON",
+    "VERDICT_JSON is not an object",
+    "no VERDICT_JSON line",
+    "VERDICT_JSON must be the final report line",
+    "VERDICT_JSON must immediately follow the final VERDICT line",
+    "finding has an invalid shape",
+    "finding has an invalid severity",
+    "finding has an invalid class",
+    "finding has an invalid file",
+    "finding has an invalid line",
+    "finding has an invalid title",
+    "response exceeds the configured limit",
+    "VERDICT_JSON has an invalid shape",
+    "VERDICT_JSON does not match the PR verdict",
+    "findings is not a list",
+})
+# The validator lists at most five narration line numbers.
+NARRATION_PROBLEM = re.compile(
+    r"process narration appears on report line\(s\): [0-9]{1,7}(?:, [0-9]{1,7}){0,4}"
+)
 RETRY_NOTE = (
     "Retry attempt. The previous report failed structural validation. Emit a corrected "
     "full report that satisfies the reporting contract. The validator problems follow."
@@ -36,22 +61,38 @@ RETRY_NOTE = (
 UNKNOWN_PROBLEM = "validator problem unavailable"
 
 
-def sanitize_problems(text: str) -> str:
-    """Return the validator text as one bounded line of printable ASCII."""
-    flattened = text.replace("\r", " ").replace("\n", " ")
-    printable = NON_PRINTABLE_ASCII.sub("", flattened)
-    collapsed = REPEATED_SPACES.sub(" ", printable).strip()
-    return collapsed[:MAX_PROBLEM_CHARS] or UNKNOWN_PROBLEM
+def is_known_problem(message: str) -> bool:
+    """Return whether a validator message comes from the fixed allowlist."""
+    return message in KNOWN_PROBLEMS or NARRATION_PROBLEM.fullmatch(message) is not None
+
+
+def select_problems(text: str) -> list[str]:
+    """Return the allowlisted validator lines, deduplicated, in input order.
+
+    A line outside the allowlist adds UNKNOWN_PROBLEM once. An input without
+    an allowlisted line yields UNKNOWN_PROBLEM alone.
+    """
+    selected: list[str] = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        message = line.removeprefix(VALIDATOR_PREFIX)
+        known = line.startswith(VALIDATOR_PREFIX) and is_known_problem(message)
+        entry = VALIDATOR_PREFIX + message if known else UNKNOWN_PROBLEM
+        if entry not in selected:
+            selected.append(entry)
+    return selected or [UNKNOWN_PROBLEM]
 
 
 def build_retry_case(case: object, problems: str) -> dict[str, object]:
-    """Return a copy of the case with the problems in trusted context."""
+    """Return a copy of the case with the allowlisted problems in trusted context."""
     if not isinstance(case, dict):
         raise ValueError("case is not an object")
     trusted = case.get("TRUSTED_HOOK_CONTEXT")
     if not isinstance(trusted, dict) or not isinstance(case.get("REVIEW_TARGET"), dict):
         raise ValueError("case lacks TRUSTED_HOOK_CONTEXT or REVIEW_TARGET")
-    text = RETRY_NOTE + "\n" + sanitize_problems(problems)
+    text = "\n".join([RETRY_NOTE, *select_problems(problems)])
     retry_trusted = {**trusted, "text": text, "sha256": build_pr_case._digest(text)}
     return {**case, "TRUSTED_HOOK_CONTEXT": retry_trusted}
 

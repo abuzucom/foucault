@@ -345,8 +345,8 @@ jobs:
             exit "$status"
           fi
           # The retry envelope carries the validator problems in trusted
-          # context. The validator emits fixed messages, and the builder keeps
-          # bounded printable ASCII. REVIEW_TARGET stays byte-identical.
+          # context. The builder passes only allowlisted validator messages.
+          # REVIEW_TARGET stays byte-identical.
           if ! validation_error="$(
             python3 scripts/check_pr_review_response.py response.txt 2>&1 > /dev/null
           )"; then
