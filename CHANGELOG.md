@@ -6,6 +6,38 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.7.15] (2026-11-14)
+
+### Fixed
+
+- Reported a missing `EVENT_PATH` in `ci/build_pr_case.py` as a case
+  construction failure with exit code 1. The script raised `KeyError` with a
+  traceback.
+- Rejected an invalid `max_output_tokens` provider value in
+  `ci/call_model.py` with `ProviderError`. Zero, negative, Boolean, string,
+  and float values reached the provider request unchecked. The default stays
+  8192 tokens.
+- Reported a malformed or non-object `expected.json` in `eval/run_eval.py` as
+  a `CaseError` naming the case. The harness raised `JSONDecodeError`.
+
+### Changed
+
+- Exported `parse_verdict_json_line`, `valid_line_number`,
+  `VERDICT_JSON_PREFIX`, and `VERDICT_JSON_KEYS` from
+  `scripts/check_pr_review_response.py`. `eval/run_eval.py` parses the
+  VERDICT_JSON line and validates finding line numbers with those helpers. The
+  evaluator and the CI validator now share one implementation. Validator
+  messages stay unchanged.
+- Replaced the four copies of the diff process cleanup in
+  `ci/build_pr_case.py` with one `_terminate_reader` helper. Named the
+  metadata timeout, the reader grace period, the model name limit, and the
+  default output budget.
+
+### Added
+
+- Added `tests/test_review_adapter_quality.py` with behavioral tests for
+  each fix and for the shared parser.
+
 ## [3.7.13] (2026-11-13)
 
 ### Fixed
