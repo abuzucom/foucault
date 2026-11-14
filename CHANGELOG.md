@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.8.1] (2026-11-14)
+
+### Removed
+
+- Removed the unused `ollama` profile for `kimi-k2.7-code` from
+  `ci/model_providers.json`. That model broke the report format contract on
+  every observed review. No route selected it after v3.7.12.
+- Removed the shipped `large_input_provider` key. It named the active
+  profile. That profile already holds the largest configured context. An
+  oversized review still exits with code 3 and records `NEEDS-HUMAN`. The
+  adapter keeps its routing code for adopter registries that set the key.
+
 ## [3.8.0] (2026-11-14)
 
 ### Added
