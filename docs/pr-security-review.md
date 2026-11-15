@@ -187,8 +187,9 @@ pattern, or require review for workflow changes in branch protection.
 ### Verify the wiring
 
 Open a documentation-only pull request in the adopter repository. The review
-posts an `APPROVE` comment on the pull request. A missing comment after a few
-minutes means the run failed. Find the `security-review-pr` run under the
+posts an `APPROVE` comment on the pull request. A failed review posts the
+model response or a failure notice instead. A missing comment after a few
+minutes means the resolve job failed. Find the `security-review-pr` run under the
 default branch in the Actions tab. `workflow_run` runs do not appear on the
 pull request branch.
 
@@ -334,6 +335,11 @@ A capacity `NEEDS-HUMAN` verdict also fails the job when `fail_on_block` is
 true. Merge after human review follows the branch protection process.
 
 The workflow never converts a provider failure into `APPROVE`.
+
+A failure without a `VERDICT` line still posts a pull request comment when
+`pr_comment` is true. The comment holds the fenced model response and the
+workflow run link. An empty response yields a fixed notice instead. The
+`security-review` check still fails. A human judges the posted response.
 
 ## Local testing
 
