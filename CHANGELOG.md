@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
-## [3.8.2] (2026-11-15)
+## [3.8.3] (2026-11-15)
 
 ### Changed
 
@@ -17,6 +17,53 @@ loading `AUDIT.md` into a deployment.
   inputs, job permissions, and check run titles.
 - `docs/pr-quality-review.md` names `minimax-m3.1-flash` as the active
   profile of the pinned euler revision.
+
+## [3.8.2] (2026-11-14)
+
+### Changed
+
+- `scripts/sync.py` no longer accepts positional arguments, abbreviated
+  flags, or more than one mode flag. Each call takes no argument or one of
+  `--check`, `--check-shared`, `--write-shared`, and `--print-adoptable`. Every caller in the Makefile,
+  CI, pre-commit, and the policy documents uses one of those forms.
+- `claim_errors` in `scripts/delivery_evidence.py` returns a different error
+  set for primary branches. A `main` or `master` checkout reports
+  `current branch is a primary branch`. A branch that differs from the
+  remote ref still reports `current branch does not match remote ref`. A
+  `main` checkout pushing to `main` previously reported only the mismatch
+  error.
+
+### Fixed
+
+- Reported an unversioned staged changelog in `scripts/check_changelog.py`
+  instead of raising `TypeError`. A staged `## [Unreleased]` changelog after
+  a versioned `HEAD` now prints the findings and exits 1. The missing
+  version heading is the only version finding for that case.
+- Rejected unknown arguments in `scripts/sync.py` with exit code 2. A
+  misspelled `--check` previously fell through to the write mode and
+  rewrote the policy copies. The four documented modes stay unchanged.
+- Reported a `shared-files.json` manifest that is not a JSON object instead
+  of raising `AttributeError` in `sync.py --check-shared`.
+- Named the assembled policy bundle in the `sync.py` size error. The error
+  previously blamed `AGENTS.md` alone.
+- Rejected delivery claims from `master` as well as `main` in
+  `scripts/delivery_evidence.py`.
+- Rejected an `AUDIT.md` of exactly 32768 bytes in
+  `scripts/check_audit_policy.py`. Product rule 4 requires the file to stay
+  below that size. The finding reads
+  `policy must be smaller than 32768 bytes`.
+- Required `scripts/branch_name_bans.txt` in `scripts/check_gate_adoption.py`.
+  `check_branch_name.py` treats an absent list as empty. A partial copy
+  therefore dropped the vulgarity check without a report.
+- Reported an empty or comment-only `scripts/branch_name_bans.txt` in
+  `scripts/check_gate_adoption.py`. The finding reads
+  `scripts/branch_name_bans.txt lists no banned tokens`. A list without
+  tokens disabled the vulgarity check like an absent list.
+
+### Added
+
+- Added `tests/test_checker_crash_handling.py` with behavioral tests for each
+  fix.
 
 ## [3.8.1] (2026-11-14)
 
