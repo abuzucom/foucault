@@ -162,6 +162,19 @@ class FailureCommentBehaviorTest(unittest.TestCase):
         self.assertLessEqual(len(comment["body"]), GITHUB_COMMENT_LIMIT)
         self.assertIn("truncated", comment["body"])
 
+    def test_long_backtick_run_still_fits_in_one_comment(self):
+        """The fence grows with the response's longest backtick run.
+
+        A response near the cap with thousands of consecutive backticks
+        would push two matching fences past the GitHub limit.
+        """
+        for response in ("`" * 30000 + "x" * 30000, "`" * (GITHUB_COMMENT_LIMIT * 2)):
+            with self.subTest(length=len(response)):
+                comment = self._post(response)
+                self.assertLessEqual(len(comment["body"]), GITHUB_COMMENT_LIMIT)
+                self.assertIn("truncated", comment["body"])
+                self.assertIn(RUN_URL, comment["body"])
+
 
 if __name__ == "__main__":
     unittest.main()

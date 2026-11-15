@@ -511,9 +511,18 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            // GitHub rejects comment bodies above 65536 characters. The
-            // limit leaves room for the metadata header and the fences.
+            // GitHub rejects comment bodies above 65536 characters. The body
+            // limit keeps a margin below that ceiling.
+            const MAX_BODY_CHARS = 65000;
             const MAX_RESPONSE_CHARS = 60000;
+            // The truncation note length depends on the shown length. The
+            // reserve covers the longest form of that note.
+            const TRUNCATION_NOTE_RESERVE = 120;
+            const fenceFor = (text) => {
+              const runs = text.match(/`+/g) || [];
+              const longest = runs.reduce((n, s) => Math.max(n, s.length), 0);
+              return '`'.repeat(Math.max(3, longest + 1));
+            };
             let raw = '';
             try {
               raw = fs.readFileSync('response.txt', 'utf8');
@@ -537,20 +546,25 @@ jobs:
                 "The workflow run log names the failed step.",
               ].join("\n");
             } else {
-              const truncated = raw.length > MAX_RESPONSE_CHARS;
-              const shown = truncated ? raw.slice(0, MAX_RESPONSE_CHARS) : raw;
-              // The response is model output shaped by an attacker-controlled
-              // diff. The fence outruns the longest backtick run, so markdown
-              // cannot render images, links, or mentions from it.
-              const runs = shown.match(/`+/g) || [];
-              const longest = runs.reduce((n, s) => Math.max(n, s.length), 0);
-              const fence = '`'.repeat(Math.max(3, longest + 1));
               const notes = [
                 "The model response below has no valid VERDICT line.",
                 "The security-review check failed. A human must judge this response.",
               ];
-              if (truncated) {
-                notes.push(`This comment shows the first ${MAX_RESPONSE_CHARS} characters (truncated).`);
+              // The response is model output shaped by an attacker-controlled
+              // diff. The fence outruns the longest backtick run, so markdown
+              // cannot render images, links, or mentions from it. A long run
+              // grows both fences. The budget subtracts the fences of the
+              // first slice. A shorter slice never needs a longer fence, so
+              // the final body stays within MAX_BODY_CHARS.
+              const firstFence = fenceFor(raw.slice(0, MAX_RESPONSE_CHARS));
+              const fixedChars = metadata.length + notes.join("\n").length +
+                TRUNCATION_NOTE_RESERVE + 2 * (firstFence.length + 2);
+              const budget = Math.max(
+                0, Math.min(MAX_RESPONSE_CHARS, MAX_BODY_CHARS - fixedChars));
+              const shown = raw.slice(0, budget);
+              const fence = fenceFor(shown);
+              if (shown.length < raw.length) {
+                notes.push(`This comment shows the first ${shown.length} characters (truncated).`);
               }
               report = `${notes.join("\n")}\n${fence}\n${shown}\n${fence}`;
             }

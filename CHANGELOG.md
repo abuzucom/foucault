@@ -12,7 +12,9 @@ loading `AUDIT.md` into a deployment.
 
 - A security review that ends without a `VERDICT` line now posts a pull
   request comment. The comment carries the fenced model response and the
-  workflow run link. An empty response posts a fixed failure notice. The new
+  workflow run link. An empty response posts a fixed failure notice. The
+  shown response shrinks to fit both backtick fences within the GitHub comment
+  limit. A long backtick run therefore cannot block the comment. The new
   `security-review.yml` step runs only on a failure with an empty verdict
   output. A `BLOCK` verdict keeps its single comment. The `security-review`
   check still fails, and the merge gate stays closed.
