@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.8.2] (2026-11-15)
+
+### Changed
+
+- Moved the euler quality review pin in `quality-review-pr.yml` from euler
+  0.7.1 to 0.9.0 (`940c53a`). The quality review now runs
+  `minimax-m3.1-flash` and reviews most pull requests in one model call.
+  Euler 0.7.1 ran `kimi-k2.7-code`. Euler 0.9.0 keeps the same workflow
+  inputs, job permissions, and check run titles.
+- `docs/pr-quality-review.md` names `minimax-m3.1-flash` as the active
+  profile of the pinned euler revision.
+
 ## [3.8.1] (2026-11-14)
 
 ### Removed
