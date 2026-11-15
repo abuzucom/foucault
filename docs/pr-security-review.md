@@ -201,7 +201,8 @@ not pass validation.
 
 The active profile is `ollama-large`. That profile uses Ollama and
 `minimax-m3.1-flash`. `kimi-k2.7-code` broke the report format contract on
-every observed review. The other profiles in
+every observed review. The registry no longer ships its profile. The other
+profiles in
 `ci/model_providers.json` serve as adopter-configured templates. Adopters must
 supply valid model identifiers and secrets when activating those profiles. The
 caller maps the provider-specific repository secret to `MODEL_API_KEY`:
@@ -218,10 +219,12 @@ disabled by default.
 ### Input budgets and large diffs
 
 Each profile accepts an optional `max_input_tokens` field. The value equals
-the model context window minus `max_output_tokens` and a safety margin. The
-top-level `large_input_provider` key names a second profile for large diffs.
-Both profiles use the same `MODEL_API_KEY`. The large profile therefore needs
-the same provider and secret as the active profile.
+the model context window minus `max_output_tokens` and a safety margin. An
+adopter registry can set the top-level `large_input_provider` key to name a
+second profile for large diffs. Both profiles use the same `MODEL_API_KEY`.
+The large profile therefore needs the same provider and secret as the active
+profile. The shipped registry sets no large-input route. Its active profile
+already holds the largest configured context.
 
 The adapter estimates input tokens as one token per three characters. The
 estimate covers the policy and the review case. The fixed report format
@@ -240,12 +243,14 @@ adapter applies these rules:
   `NEEDS-HUMAN`. The job log keeps the HTTP status.
 - An input above every budget exits with code 3.
 
-The shipped budgets follow:
+The shipped budget follows:
 
 | Profile | Model | Context | `max_input_tokens` |
 | --- | --- | --- | --- |
-| `ollama` | `kimi-k2.7-code` | 256K | 230000 |
 | `ollama-large` | `minimax-m3.1-flash` | 976K | 900000 |
+
+An input above that budget exits with code 3 before a model call. A context
+rejection from the provider also exits with code 3.
 
 Adopters copy `ci/build_pr_case.py`, `ci/call_model.py`, and
 `ci/model_providers.json` again when they advance the pin. Older script
