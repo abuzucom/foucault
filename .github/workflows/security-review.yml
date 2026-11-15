@@ -496,6 +496,71 @@ jobs:
               body,
             });
 
+      # A review that ends without a verdict line still reports into the pull
+      # request. The check run alone hides the model response in an artifact.
+      # The failed check keeps the merge gate closed. An empty verdict output
+      # separates this case from a BLOCK verdict, which the step above posts.
+      - name: Post review comment without a verdict
+        if: ${{ failure() && inputs.pr_comment && steps.resolve.outputs.pr_number != '' && steps.verdict.outputs.line == '' }}
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}
+          BASE_SHA: ${{ steps.resolve.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const fs = require('fs');
+            // GitHub rejects comment bodies above 65536 characters. The
+            // limit leaves room for the metadata header and the fences.
+            const MAX_RESPONSE_CHARS = 60000;
+            let raw = '';
+            try {
+              raw = fs.readFileSync('response.txt', 'utf8');
+            } catch (error) {
+              // A model call that failed early writes no response file.
+              if (error.code !== 'ENOENT') {
+                throw error;
+              }
+            }
+            const metadata = [
+              "Security review metadata",
+              `- Head: \`${process.env.HEAD_SHA}\``,
+              `- Base: \`${process.env.BASE_SHA}\``,
+              `- Workflow run: ${process.env.RUN_URL}`,
+              "",
+            ].join("\n");
+            let report;
+            if (raw.trim() === '') {
+              report = [
+                "The security review failed before the model returned a response.",
+                "The workflow run log names the failed step.",
+              ].join("\n");
+            } else {
+              const truncated = raw.length > MAX_RESPONSE_CHARS;
+              const shown = truncated ? raw.slice(0, MAX_RESPONSE_CHARS) : raw;
+              // The response is model output shaped by an attacker-controlled
+              // diff. The fence outruns the longest backtick run, so markdown
+              // cannot render images, links, or mentions from it.
+              const runs = shown.match(/`+/g) || [];
+              const longest = runs.reduce((n, s) => Math.max(n, s.length), 0);
+              const fence = '`'.repeat(Math.max(3, longest + 1));
+              const notes = [
+                "The model response below has no valid VERDICT line.",
+                "The security-review check failed. A human must judge this response.",
+              ];
+              if (truncated) {
+                notes.push(`This comment shows the first ${MAX_RESPONSE_CHARS} characters (truncated).`);
+              }
+              report = `${notes.join("\n")}\n${fence}\n${shown}\n${fence}`;
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number(process.env.PR_NUMBER),
+              body: `${metadata}${report}`,
+            });
+
       # The caller skips a head that already has a review record. A check
       # run name and summary are writable by any workflow token holding
       # checks: write, including one in a workflow a pull request branch

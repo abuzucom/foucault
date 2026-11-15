@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.8.7] (2026-11-15)
+
+### Fixed
+
+- A security review that ends without a `VERDICT` line now posts a pull
+  request comment. The comment carries the fenced model response and the
+  workflow run link. An empty response posts a fixed failure notice. The new
+  `security-review.yml` step runs only on a failure with an empty verdict
+  output. A `BLOCK` verdict keeps its single comment. The `security-review`
+  check still fails, and the merge gate stays closed.
+
+### Added
+
+- Added `tests/test_review_failure_comment.py`. The test executes the new
+  step script under node.
+
 ## [3.8.6] (2026-11-15)
 
 ### Changed
