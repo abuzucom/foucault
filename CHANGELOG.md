@@ -16,9 +16,11 @@ loading `AUDIT.md` into a deployment.
   sequence there could rewrite the terminal or its title. Tabs and line
   breaks stay unchanged.
 - Extended the weak-hash and secret checkers to `hooks/`, `eval/*.py`, and
-  `tools/` in CI and pre-commit. The CI secret step also scans
-  `.pre-commit-config.yaml`. `eval/cases/` stays out because its fixtures hold
-  intentional findings.
+  `tools/` in CI and pre-commit. CI enables bash `globstar`. The
+  `hooks/**/*.py` and `tools/**/*.py` patterns then reach every directory
+  depth, the same scope as the pre-commit regexes. The CI secret step also
+  scans `.pre-commit-config.yaml`.
+  `eval/cases/` stays out because its fixtures hold intentional findings.
 - Ran the three PyYAML pre-commit hooks as `language: system`. Pre-commit
   previously installed PyYAML into its own environment without hash
   verification. The hooks now use the Python that installed

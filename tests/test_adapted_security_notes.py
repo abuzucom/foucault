@@ -98,7 +98,10 @@ class CheckerScopeTest(unittest.TestCase):
         for name in CHECKER_STEPS:
             with self.subTest(step=name):
                 command = steps[name]
-                for pattern in ("hooks/*.py", "eval/*.py", "tools/*/*.py"):
+                # globstar makes ** match every directory depth, so the CI
+                # scope equals the recursive pre-commit regex.
+                self.assertIn("shopt -s globstar", command)
+                for pattern in ("hooks/**/*.py", "eval/*.py", "tools/**/*.py"):
                     self.assertIn(pattern, command)
 
     def test_pre_commit_hooks_match_hooks_eval_and_tools(self):

@@ -108,11 +108,11 @@
     "tools/hook-trace/sitecustomize.py": "9dde32d98e1bdf58d0edadf2afc03b7215239f00669021934906574f6e146b1f"
   },
   "local_adapted_files": {
-    ".github/workflows/ci.yml": "0997e050ef7871e31de873300cece67e0da4fb0594d4d3c8533c54ba76e6455a",
+    ".github/workflows/ci.yml": "232df9b0b548726fb4bc171be3951809bad670eef2bc4805e8c6dde41173b120",
     ".github/workflows/immutable-conflict-check.yml": "e1ff31182b66bc1ad6587b0c254848db5d0a6e2acaad956f2085cae51cd3caab",
     ".pre-commit-config.yaml": "d7fe9857b81d7e0e20941fdb67f9c39cd503164dffc985cc47a70823879a15d0",
     "AGENTS.md": "b4e1a017147c3cf8fd69d6a607249731e3fb4731380dc7372422ce5139ad717b",
-    "CHANGELOG.md": "7501b16a74cb8d4261fb780b5830697158c6fcc18cf5238fca76de460d3d8a5a",
+    "CHANGELOG.md": "c821d6ee9628757301ed37de2a346b002cbdf8072cec27bf570501b15f019a8e",
     "CONTRIBUTING.md": "0ca0b20dc825eef3d1b3cc01f1663efb76a3884569485d323ca510eb9336c618",
     "Makefile": "03bf29034c54967b3558649c04d2ed3a8f86d17b6a2734f94304955be07d032e",
     "README.md": "a745b46a1dde1719fdcc829117753759ef94355081c55a0cc6a8a2a70ff37e14",

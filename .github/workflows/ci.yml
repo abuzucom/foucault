@@ -95,16 +95,20 @@ jobs:
 
       # eval/cases/ is absent on purpose. Its fixtures hold intentional
       # weak hashes and placeholder secrets for the review model to find.
+      # globstar makes ** match every depth under hooks/ and tools/, the
+      # same scope as the pre-commit regexes.
       - name: Weak hashing
-        run: >-
-          python3 scripts/check_weak_hashing.py
-          scripts/*.py ci/*.py hooks/*.py eval/*.py tools/*/*.py
+        run: |
+          shopt -s globstar
+          python3 scripts/check_weak_hashing.py \
+            scripts/*.py ci/*.py hooks/**/*.py eval/*.py tools/**/*.py
 
       - name: Secret heuristics
-        run: >-
-          python3 scripts/check_secrets_heuristic.py
-          scripts/*.py ci/*.py hooks/*.py eval/*.py tools/*/*.py
-          .github/workflows/*.yml .pre-commit-config.yaml Makefile
+        run: |
+          shopt -s globstar
+          python3 scripts/check_secrets_heuristic.py \
+            scripts/*.py ci/*.py hooks/**/*.py eval/*.py tools/**/*.py \
+            .github/workflows/*.yml .pre-commit-config.yaml Makefile
 
       - name: Conflict markers
         run: python3 scripts/check_conflict_markers.py
