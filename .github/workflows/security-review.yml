@@ -33,7 +33,7 @@ on:
         required: true
         type: string
       model_call_command:
-        description: "Shell command reading $AUDIT_PROMPT_FILE and $CASE_TEXT_FILE, writing the model response to stdout."
+        description: "Exactly two words: python or python3, then a repository-relative .py adapter path. No shell runs it. The adapter reads $AUDIT_PROMPT_FILE and $CASE_TEXT_FILE and writes the model response to stdout."
         required: true
         type: string
       pr_comment:
