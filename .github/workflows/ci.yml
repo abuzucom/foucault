@@ -93,11 +93,18 @@ jobs:
       - name: Checkout credential persistence
         run: python3 scripts/check_persist_credentials.py .github/workflows/*.yml
 
+      # eval/cases/ is absent on purpose. Its fixtures hold intentional
+      # weak hashes and placeholder secrets for the review model to find.
       - name: Weak hashing
-        run: python3 scripts/check_weak_hashing.py scripts/*.py ci/*.py
+        run: >-
+          python3 scripts/check_weak_hashing.py
+          scripts/*.py ci/*.py hooks/*.py eval/*.py tools/*/*.py
 
       - name: Secret heuristics
-        run: python3 scripts/check_secrets_heuristic.py scripts/*.py ci/*.py .github/workflows/*.yml Makefile
+        run: >-
+          python3 scripts/check_secrets_heuristic.py
+          scripts/*.py ci/*.py hooks/*.py eval/*.py tools/*/*.py
+          .github/workflows/*.yml .pre-commit-config.yaml Makefile
 
       - name: Conflict markers
         run: python3 scripts/check_conflict_markers.py
