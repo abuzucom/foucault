@@ -89,7 +89,7 @@ protection as well.
   comment beside the pin.
 - The caller maps `MODEL_API_KEY` from the `OLLAMA_API_KEY` repository
   secret. The euler adapter loads its provider profile from the pinned euler
-  revision. The active profile there is Ollama with `kimi-k2.7-code`.
+  revision. The active profile there is Ollama with `minimax-m3.1-flash`.
 - The fork environment stores its own `MODEL_API_KEY` value.
 - Never use inherited secrets. The job sends an untrusted diff to a
   provider. Inherited secrets hand every repository secret to that path.

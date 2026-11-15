@@ -26,6 +26,7 @@ EULER_USES_RE = re.compile(
     r"uses: abuzucom/euler/\.github/workflows/quality-review\.yml@([0-9a-f]{40})"
 )
 QUALITY_REF_RE = re.compile(r"quality_ref: ([0-9a-f]{40})")
+EULER_PIN = "940c53a39b7cc7345b1f6232d43bec7c4d7623df"
 
 PR_INTERPOLATION_PATTERNS = (
     "${{ github.event.pull_request.title }}",
@@ -389,6 +390,13 @@ class QualityReviewCallerTest(unittest.TestCase):
         self.assertTrue(matches)
         for sha in matches:
             self.assertRegex(sha, r"^[0-9a-f]{40}$")
+
+    def test_euler_pin_names_the_minimax_release(self):
+        # Euler 0.9.0 reviews on minimax-m3.1-flash in one call per pull
+        # request. Euler 0.7.1 ran kimi-k2.7-code.
+        self.assertIn("# Euler 0.9.0.", self.caller)
+        self.assertEqual(set(EULER_USES_RE.findall(self.caller)), {EULER_PIN})
+        self.assertEqual(set(QUALITY_REF_RE.findall(self.caller)), {EULER_PIN})
 
     def test_quality_ref_matches_the_uses_pin(self):
         """The policy and the adapter must come from one commit.
