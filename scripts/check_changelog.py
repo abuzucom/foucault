@@ -155,7 +155,10 @@ def check_staged(repository: Path) -> int:
     previous_version = _first_version(previous_result.stdout)
     if "CHANGELOG.md" not in staged:
         findings.append("staged changes require a versioned CHANGELOG.md entry")
-    elif previous_version is not None and current_version <= previous_version:
+    # A staged changelog without a version heading already carries the
+    # find_violations finding. It has no version that could fail to advance.
+    elif (current_version is not None and previous_version is not None
+            and current_version <= previous_version):
         findings.append("CHANGELOG.md version must advance with staged changes")
     for finding in findings:
         print(f"error: CHANGELOG.md: {finding}", file=sys.stderr)
