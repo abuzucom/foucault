@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
-## [3.8.4] (2026-11-15)
+## [3.8.5] (2026-11-15)
 
 ### Changed
 
@@ -17,6 +17,20 @@ loading `AUDIT.md` into a deployment.
   inputs, job permissions, and check run titles.
 - `docs/pr-quality-review.md` names `minimax-m3.1-flash` as the active
   profile of the pinned euler revision.
+
+## [3.8.4] (2026-11-15)
+
+### Fixed
+
+- Reported a `"shared"` value in `shared-files.json` that is not a JSON
+  object in `sync.py --check-shared`. A list or string under that key raised
+  `TypeError`. The finding reads
+  `"shared" in shared-files.json is not a JSON object`.
+
+### Added
+
+- Added `tests/test_sync_manifest_shape.py`. The tests cover a list and a
+  string under the `"shared"` key.
 
 ## [3.8.3] (2026-11-15)
 

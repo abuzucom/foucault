@@ -375,7 +375,14 @@ def check_shared(root: Path) -> int:
         print(f"error: {SHARED_MANIFEST} is missing or unreadable",
               file=sys.stderr)
         return 1
-    problems = shared_problems(root, manifest.get("shared", {}))
+    recorded = manifest.get("shared", {})
+    # shared_problems indexes this value by file name. A list or string
+    # would raise TypeError there instead of producing a report.
+    if not isinstance(recorded, dict):
+        print(f'error: "shared" in {SHARED_MANIFEST} is not a JSON object',
+              file=sys.stderr)
+        return 1
+    problems = shared_problems(root, recorded)
     if not problems:
         print(f"all {len(SHARED_FILES)} shared files match {SHARED_MANIFEST}")
         return 0
