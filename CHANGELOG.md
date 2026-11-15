@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.8.4] (2026-11-15)
+
+### Fixed
+
+- Reported a `"shared"` value in `shared-files.json` that is not a JSON
+  object in `sync.py --check-shared`. A list or string under that key raised
+  `TypeError`. The finding reads
+  `"shared" in shared-files.json is not a JSON object`.
+
+### Added
+
+- Added `tests/test_sync_manifest_shape.py`. The tests cover a list and a
+  string under the `"shared"` key.
+
 ## [3.8.2] (2026-11-14)
 
 ### Changed
@@ -47,17 +61,11 @@ loading `AUDIT.md` into a deployment.
   `scripts/check_gate_adoption.py`. The finding reads
   `scripts/branch_name_bans.txt lists no banned tokens`. A list without
   tokens disabled the vulgarity check like an absent list.
-- Reported a `"shared"` value in `shared-files.json` that is not a JSON
-  object in `sync.py --check-shared`. A list or string under that key raised
-  `TypeError`. The finding reads
-  `"shared" in shared-files.json is not a JSON object`.
 
 ### Added
 
 - Added `tests/test_checker_crash_handling.py` with behavioral tests for each
   fix.
-- Added `tests/test_sync_manifest_shape.py`. The tests cover a list and a
-  string under the `"shared"` key.
 
 ## [3.8.1] (2026-11-14)
 
