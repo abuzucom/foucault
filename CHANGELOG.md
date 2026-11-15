@@ -6,6 +6,37 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.8.6] (2026-11-15)
+
+### Changed
+
+- The CI "Prose style" step runs `make lint PYTHON=python3`. The Makefile
+  `PROSE_FILES` list is the single prose file list. It adds
+  `docs/pr-quality-review.md` and `docs/pr-security-review.md`. CI now also
+  checks the five `docs/agent-policy/` pages. `make lint` runs the blocking
+  `check_ascii.py` check. The shell loop and its shellcheck suppression are
+  gone.
+- Pinned `actions/setup-python` to Python 3.14 in `ci.yml`,
+  `scheduled-validation.yml`, and `immutable-conflict-check.yml`. CI
+  resolved `3.x` to 3.14.10 on every runner. The trusted compliance schema
+  accepts a pinned minor version.
+- Added release comments to the three action pins in
+  `immutable-conflict-check.yml`.
+- Dropped the always-empty `github.event.pull_request.head.sha` term from the
+  `security-review-pr.yml` concurrency group. A `workflow_run` event carries
+  no pull request payload.
+- Renamed the inner `matches` constant in `quality-review-pr.yml` to
+  `workflowRuns`. The outer `matches` constant no longer shares its name.
+- The `model_call_command` input description in `security-review.yml` states
+  the two-word `python` or `python3` and `.py` contract. The input name, type,
+  and requirement stay unchanged.
+- Corrected the `ci.yml` header. The header names `actions/setup-python` and
+  the hash-checked PyYAML install.
+
+### Added
+
+- Added `tests/test_workflow_quality_wiring.py`.
+
 ## [3.8.5] (2026-11-15)
 
 ### Changed

@@ -112,11 +112,11 @@ jobs:
                   per_page: 100,
                 },
               );
-              const matches = runs.filter(
+              const workflowRuns = runs.filter(
                 (run) => run.name === workflowName && run.head_sha === headSha,
               );
-              matches.sort((left, right) => right.id - left.id);
-              return matches.length > 0 ? matches[0] : null;
+              workflowRuns.sort((left, right) => right.id - left.id);
+              return workflowRuns.length > 0 ? workflowRuns[0] : null;
             };
 
             const ciRun = await latestRun('ci', 'pull_request');

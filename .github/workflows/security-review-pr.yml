@@ -6,7 +6,9 @@ on:
     types: [completed]
 
 concurrency:
-  group: security-review-${{ github.event.workflow_run.head_sha }}${{ github.event.pull_request.head.sha }}
+  # A workflow_run event carries no pull_request payload. The run head SHA
+  # alone names the review subject.
+  group: security-review-${{ github.event.workflow_run.head_sha }}
   cancel-in-progress: true
 
 permissions:
