@@ -6,6 +6,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.8.7] (2026-11-15)
+
+### Security
+
+- Replaced terminal control characters in `gh` stdout in
+  `scripts/trusted_gh.py`. Stderr already passed through the same filter.
+  Titles, bodies, and comments from other accounts reach stdout. An escape
+  sequence there could rewrite the terminal or its title. Tabs and line
+  breaks stay unchanged.
+- Extended the weak-hash and secret checkers to `hooks/`, `eval/*.py`, and
+  `tools/` in CI and pre-commit. CI enables bash `globstar`. The
+  `hooks/**/*.py` and `tools/**/*.py` patterns then reach every directory
+  depth, the same scope as the pre-commit regexes. The CI secret step also
+  scans `.pre-commit-config.yaml`.
+  `eval/cases/` stays out because its fixtures hold intentional findings.
+- Ran the three PyYAML pre-commit hooks as `language: system`. Pre-commit
+  previously installed PyYAML into its own environment without hash
+  verification. The hooks now use the Python that installed
+  `requirements-checkers.txt` in pip hash-checking mode.
+
+### Added
+
+- Added `tests/test_adapted_security_notes.py`.
+
 ## [3.8.6] (2026-11-15)
 
 ### Changed
