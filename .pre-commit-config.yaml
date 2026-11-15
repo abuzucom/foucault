@@ -1,3 +1,7 @@
+# Hooks that import PyYAML run as language: system. They use the Python that
+# installed requirements-checkers.txt in pip hash-checking mode:
+#   python -m pip install --requirement requirements-checkers.txt
+# A pre-commit managed environment would install PyYAML without hashes.
 repos:
   - repo: local
     hooks:
@@ -34,25 +38,24 @@ repos:
       - id: check-persist-credentials
         name: Check persist-credentials on checkout steps (Rule 11)
         entry: python scripts/check_persist_credentials.py
-        language: python
-        additional_dependencies: [PyYAML==6.0.3]
+        language: system
         files: ^\.github/workflows/.*\.ya?ml$
       - id: check-weak-hashing
         name: Check for unjustified MD5/SHA-1 (Rule 7)
         entry: python scripts/check_weak_hashing.py
         language: python
-        files: ^scripts/.*\.py$
+        # eval/cases/ fixtures hold intentional weak hashes. eval/*.py stays in.
+        files: ^((scripts|ci|hooks|tools)/.*\.py|eval/[^/]*\.py)$
       - id: check-dockerfile-root
         name: Check for non-root containers (Rule 12)
         entry: python scripts/check_dockerfile_root.py
-        language: python
-        additional_dependencies: [PyYAML==6.0.3]
+        language: system
         files: ^(Dockerfile.*|docker-compose.*\.ya?ml|compose.*\.ya?ml)$
       - id: check-secrets-heuristic
         name: Check for likely secrets (Rule 8)
         entry: python scripts/check_secrets_heuristic.py
         language: python
-        files: ^(scripts/.*\.py|\.github/workflows/.*\.ya?ml|\.pre-commit-config\.yaml|Makefile)$
+        files: ^((scripts|ci|hooks|tools)/.*\.py|eval/[^/]*\.py|\.github/workflows/.*\.ya?ml|\.pre-commit-config\.yaml|Makefile)$
       - id: check-conflict-markers
         name: Check for unresolved conflict markers
         entry: python scripts/check_conflict_markers.py --staged
@@ -62,8 +65,7 @@ repos:
       - id: hook-tests
         name: Parallel policy tests
         entry: python scripts/run_tests.py
-        language: python
-        additional_dependencies: [PyYAML==6.0.3]
+        language: system
         files: ^(hooks/.*\.py|tests/.*\.py|\.(claude/settings|codex/hooks|gemini/settings|agents/hooks)\.json|\.codex/config\.toml|\.github/workflows/.*\.ya?ml|scripts/(sync|trusted_gh|trusted_git|read_git_state|run_tests|prose_policy|check_changelog|check_gate_adoption|check_hook_coverage|check_(banned_agents|branch_name|commit_attribution|commit_message|compliance_tree|dockerfile_root|external_pr_refs|git_identity|hedging|persist_credentials|pull_request_message|secrets_heuristic|weak_hashing))\.py|scripts/prose_bans\.txt)$
         pass_filenames: false
       - id: check-git-identity

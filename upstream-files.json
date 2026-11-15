@@ -108,11 +108,11 @@
     "tools/hook-trace/sitecustomize.py": "9dde32d98e1bdf58d0edadf2afc03b7215239f00669021934906574f6e146b1f"
   },
   "local_adapted_files": {
-    ".github/workflows/ci.yml": "903d2483640391239ddf30b75ef7fc6873c65732b34d38776e9443be144b74dd",
+    ".github/workflows/ci.yml": "232df9b0b548726fb4bc171be3951809bad670eef2bc4805e8c6dde41173b120",
     ".github/workflows/immutable-conflict-check.yml": "e1ff31182b66bc1ad6587b0c254848db5d0a6e2acaad956f2085cae51cd3caab",
-    ".pre-commit-config.yaml": "9047cc425dfcf0642ae5f2834b5f39a5cdb6f4b1f5febc721c48fb384b1c7d8d",
+    ".pre-commit-config.yaml": "d7fe9857b81d7e0e20941fdb67f9c39cd503164dffc985cc47a70823879a15d0",
     "AGENTS.md": "b4e1a017147c3cf8fd69d6a607249731e3fb4731380dc7372422ce5139ad717b",
-    "CHANGELOG.md": "b8cdb55aeee1d7f98c8ca51b03ecabace825ed2c75ec657bf336ad4a61a0bcdf",
+    "CHANGELOG.md": "27f9e5b64f625cb4183d37bf96436fc7cfc066b7c96d2a571bf311e8c9e3c7a4",
     "CONTRIBUTING.md": "0ca0b20dc825eef3d1b3cc01f1663efb76a3884569485d323ca510eb9336c618",
     "Makefile": "03bf29034c54967b3558649c04d2ed3a8f86d17b6a2734f94304955be07d032e",
     "README.md": "a745b46a1dde1719fdcc829117753759ef94355081c55a0cc6a8a2a70ff37e14",
@@ -127,7 +127,7 @@
     "scripts/check_upstream_drift.py": "8f1e1b5d26efd642736aaf0c1407dd0b3fbeebbdc22798cfb37238569a7ba9c2",
     "scripts/delivery_evidence.py": "baa19df1a91dc24c0ab530e21dcd3d06ecf4319c4f30da219ca8a080560ad03c",
     "scripts/sync.py": "6226590af92ee6801a6ae1cd7975c3e9574bd36bd95fda3de8a7376a60a75003",
-    "scripts/trusted_gh.py": "cb1b878334125e05cc65b27ad7b659e3a44a7400934df00f967e6929b24a6b7d",
+    "scripts/trusted_gh.py": "44fa3802ebe9d6e9a7468c8db7d613b35eab89e24447f44ed950d9c6c0762fe5",
     "tests/test_advisory_workflow_wiring.py": "998b245ef7d381a29c24f2b9f0d9679398b87fee832ccf74ca6ce0f248054b5d",
     "tests/test_branch_validation_contexts.py": "568898c4ff3553a30fe806da2813a801d44bd894c8d13b20ca06b6c5115f92d9",
     "tests/test_check_changelog_compat.py": "ad14706c6cb9d628d0d8043f03923eba0dc1a7760280ef6f79b08a1ca9a748cb",

@@ -28,6 +28,8 @@ REPOSITORY_NAME = re.compile(
     r"\A[A-Za-z0-9](?:[A-Za-z0-9._-]{0,98}[A-Za-z0-9])?\Z"
 )
 BRANCH_NAME = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._/-]{0,199}\Z")
+# C0 controls and DEL, except tab, line feed, and carriage return.
+TERMINAL_CONTROL_PATTERN = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 GLOBAL_VALUE_OPTIONS = frozenset(("-R", "--repo", "--hostname"))
 
 
@@ -402,10 +404,14 @@ def _redact_sensitive_text(message: str) -> str:
     )
 
 
+def _strip_terminal_controls(output: str) -> str:
+    """Replace terminal control characters, keeping tabs and line breaks."""
+    return TERMINAL_CONTROL_PATTERN.sub("?", output)
+
+
 def _safe_output(output: str) -> str:
     """Return bounded command output without terminal control characters."""
-    sanitized = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "?", output)
-    return _redact_sensitive_text(sanitized)
+    return _redact_sensitive_text(_strip_terminal_controls(output))
 
 
 def _run_requested_command(repo_root, arguments: list[str]) -> int:
@@ -451,7 +457,9 @@ def _run_requested_command(repo_root, arguments: list[str]) -> int:
         category = _classify_failure(str(error))
         print(f"error: {category}; inspect connectivity and repository context", file=sys.stderr)
         return 1
-    sys.stdout.write(result.stdout[:COMMAND_OUTPUT_LIMIT])
+    # gh prints titles, bodies, and comments that other accounts wrote. An
+    # escape sequence there could rewrite the terminal or its title.
+    sys.stdout.write(_strip_terminal_controls(result.stdout[:COMMAND_OUTPUT_LIMIT]))
     safe_stderr = _safe_output(result.stderr[:COMMAND_OUTPUT_LIMIT])
     sys.stderr.write(safe_stderr)
     if result.returncode != 0:
