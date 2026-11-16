@@ -624,7 +624,12 @@ jobs:
               success: "success",
               cancelled: "cancelled",
             };
-            const conclusion = CONCLUSIONS[process.env.JOB_STATUS] || "failure";
+            // An own-property check keeps inherited names such as
+            // constructor out of the conclusion.
+            const jobStatus = process.env.JOB_STATUS;
+            const conclusion = Object.hasOwn(CONCLUSIONS, jobStatus)
+              ? CONCLUSIONS[jobStatus]
+              : "failure";
             // The verdict line is model output shaped by the pull request
             // under review. Strip characters that could break the inline
             // code span, and bound the length.
@@ -633,8 +638,12 @@ jobs:
             const fallbackLine = conclusion === "cancelled"
               ? "review run cancelled before a verdict was produced"
               : "review failed before a verdict was produced";
-            const verdictLine = sanitize(process.env.VERDICT_LINE || "")
-              || fallbackLine;
+            // A run cancelled after Parse verdict still holds a verdict line.
+            // The caller counts a VERDICT summary as a completed review. A
+            // cancelled check therefore never carries the verdict.
+            const verdictLine = conclusion === "cancelled"
+              ? fallbackLine
+              : sanitize(process.env.VERDICT_LINE || "") || fallbackLine;
             const shortHeadSha = process.env.HEAD_SHA.slice(0, 12);
             const request = {
               owner: context.repo.owner,

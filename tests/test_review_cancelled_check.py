@@ -100,6 +100,23 @@ class CancelledCheckTest(unittest.TestCase):
         request = self._publish("cancelled")["requests"][-1]
         self.assertNotIn("VERDICT:", request["output"]["summary"])
 
+    def test_cancelled_run_drops_a_parsed_verdict(self):
+        """A run cancelled after Parse verdict still publishes no verdict.
+
+        A cancelled summary with a VERDICT line would mark the head as
+        reviewed. The cancelled check would then block the merge with no
+        later review to replace it.
+        """
+        request = self._publish("cancelled", VERDICT_LINE)["requests"][-1]
+        self.assertEqual(request["conclusion"], "cancelled")
+        self.assertNotIn("VERDICT:", request["output"]["summary"])
+
+    def test_unknown_status_maps_to_failure(self):
+        for status in ("constructor", "toString", "__proto__", "skipped"):
+            with self.subTest(status=status):
+                request = self._publish(status)["requests"][-1]
+                self.assertEqual(request["conclusion"], "failure")
+
     def test_failed_run_still_publishes_a_failure(self):
         request = self._publish("failure")["requests"][-1]
         self.assertEqual(request["conclusion"], "failure")

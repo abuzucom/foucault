@@ -14,8 +14,11 @@ loading `AUDIT.md` into a deployment.
   `security-review` check. The old check reported `failure` with the
   text for a review that failed before a verdict. A newer run for the
   same head cancels the older run through the concurrency group. The
-  cancelled check carries no verdict. The caller still schedules a
+  cancelled check never carries a verdict. A run cancelled after the
+  verdict parse also drops its verdict line. The caller still schedules a
   review. A check publication error on a cancelled run logs a warning.
+  The status lookup reads only own properties. An unknown job status
+  maps to `failure`.
 
 ### Added
 
