@@ -341,6 +341,12 @@ A failure without a `VERDICT` line still posts a pull request comment when
 workflow run link. An empty response yields a fixed notice instead. The
 `security-review` check still fails. A human judges the posted response.
 
+A newer run for the same head cancels an older run through the concurrency
+group. The cancelled run publishes a `cancelled` check with no verdict. The
+newer run then publishes the review result. A `cancelled` conclusion still
+fails a required check. The caller does not count a cancelled check as a
+completed review.
+
 ## Local testing
 
 Set `AUDIT_PROMPT_FILE`, `CASE_TEXT_FILE`, and `MODEL_API_KEY` from a secret

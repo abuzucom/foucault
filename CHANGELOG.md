@@ -6,6 +6,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.8.9] (2026-11-15)
+
+### Fixed
+
+- A cancelled security review run now publishes a `cancelled`
+  `security-review` check. The old check reported `failure` with the
+  text for a review that failed before a verdict. A newer run for the
+  same head cancels the older run through the concurrency group. The
+  cancelled check never carries a verdict. A run cancelled after the
+  verdict parse also drops its verdict line. The caller still schedules a
+  review. A check publication error on a cancelled run logs a warning.
+  The status lookup reads only own properties. An unknown job status
+  maps to `failure`.
+
+### Added
+
+- Added `tests/test_review_cancelled_check.py`. The test executes the
+  `Publish check run` script under node for each job status.
+
 ## [3.8.8] (2026-11-15)
 
 ### Fixed

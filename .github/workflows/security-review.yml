@@ -616,16 +616,34 @@ jobs:
             // The review executes on the default branch under workflow_run.
             // Without a check run on the head revision the result never
             // appears in the pull request checks box.
-            const conclusion = process.env.JOB_STATUS === "success"
-              ? "success"
+            // A newer run for the same head cancels this one through the
+            // concurrency group. A cancelled run reached no verdict. Its
+            // check reports the cancellation instead of a review failure.
+            // A cancelled conclusion still fails a required check.
+            const CONCLUSIONS = {
+              success: "success",
+              cancelled: "cancelled",
+            };
+            // An own-property check keeps inherited names such as
+            // constructor out of the conclusion.
+            const jobStatus = process.env.JOB_STATUS;
+            const conclusion = Object.hasOwn(CONCLUSIONS, jobStatus)
+              ? CONCLUSIONS[jobStatus]
               : "failure";
             // The verdict line is model output shaped by the pull request
             // under review. Strip characters that could break the inline
             // code span, and bound the length.
             const sanitize = (value) =>
               value.replace(/[`\\\x00-\x1f\x7f]/g, "").slice(0, 200);
-            const verdictLine = sanitize(process.env.VERDICT_LINE || "")
-              || "review failed before a verdict was produced";
+            const fallbackLine = conclusion === "cancelled"
+              ? "review run cancelled before a verdict was produced"
+              : "review failed before a verdict was produced";
+            // A run cancelled after Parse verdict still holds a verdict line.
+            // The caller counts a VERDICT summary as a completed review. A
+            // cancelled check therefore never carries the verdict.
+            const verdictLine = conclusion === "cancelled"
+              ? fallbackLine
+              : sanitize(process.env.VERDICT_LINE || "") || fallbackLine;
             const shortHeadSha = process.env.HEAD_SHA.slice(0, 12);
             const request = {
               owner: context.repo.owner,
@@ -651,10 +669,10 @@ jobs:
               }
             }
             if (lastError) {
-              if (conclusion === "success") {
+              if (conclusion !== "failure") {
                 // A publication flake must not mask a passed review. The
                 // warning stays in the run log and the comment carries the
-                // verdict.
+                // verdict. A cancelled run has no result to protect.
                 core.warning(
                   `check run publication failed: ${lastError.message}`
                 );
