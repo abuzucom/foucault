@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project follows Semantic Versioning. Pin a tag or commit SHA when
 loading `AUDIT.md` into a deployment.
 
+## [3.8.10] (2026-11-24)
+
+### Changed
+- Announce the move to `abuzucom/agents-personas` at the top of the
+  README. The foucault persona continues there under `reviewers/foucault/`.
+  This repository receives no further changes.
+
 ## [3.8.9] (2026-11-15)
 
 ### Fixed

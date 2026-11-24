@@ -1,5 +1,13 @@
 # Foucault
 
+> **Development moved to `abuzucom/agents-personas`.** This repository
+> receives no further changes. The foucault persona lives in
+> [`reviewers/foucault/`](https://github.com/abuzucom/agents-personas/tree/main/reviewers/foucault) there. New callers
+> use [`.github/workflows/foucault-security-review.yml`](https://github.com/abuzucom/agents-personas/blob/main/.github/workflows/foucault-security-review.yml).
+> [`docs/migration.md`](https://github.com/abuzucom/agents-personas/blob/main/docs/migration.md) maps the inputs of
+> this repository's `security-review.yml`. Existing pins keep working while this repository
+> stays available.
+
 Foucault is a security review policy and validation system for LLM-assisted
 software development. It applies explicit rules to pull requests, files, code
 fragments, and generated codebases. It produces actionable findings, evidence
